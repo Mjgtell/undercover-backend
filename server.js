@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
 
 const app = express();
 app.use(cors());
@@ -137,6 +138,25 @@ function findSocket(name, code) {
 }
 
 // ═══════════════════════════════════════
+//  JIKAN IMAGE FETCH
+// ═══════════════════════════════════════
+async function fetchCharImage(charName, animeName) {
+  try {
+    const q = encodeURIComponent(charName);
+    const resp = await fetch(`https://api.jikan.moe/v4/characters?q=${q}&limit=5`);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data.data?.length) return null;
+    let best = data.data[0];
+    const animeWord = animeName.toLowerCase().split(' ')[0];
+    for (const c of data.data) {
+      if ((c.anime||[]).some(a => a.anime?.title?.toLowerCase().includes(animeWord))) { best = c; break; }
+    }
+    return best.images?.webp?.image_url || best.images?.jpg?.image_url || null;
+  } catch { return null; }
+}
+
+// ═══════════════════════════════════════
 //  HEALTH
 // ═══════════════════════════════════════
 app.get('/', (_, res) => res.send('Undercover Anime Backend OK ✅'));
@@ -219,20 +239,31 @@ io.on('connection', (socket) => {
     io.to(code).emit('toast', `${name} a quitté`);
   });
 
-  socket.on('game:start', ({ genre, mrWhite }) => {
+  socket.on('game:start', async ({ genre, mrWhite }) => {
     const { name, code } = socket.data || {};
     const room = rooms[code];
     if (!room || room.host !== name) return;
 
+    io.to(code).emit('toast', '🎲 Génération de la partie…');
+
     const pair = getRandomPair(genre || room.genre);
+
+    // Fetch images in parallel
+    const [img1, img2] = await Promise.all([
+      fetchCharImage(pair.civilian, pair.anime1),
+      fetchCharImage(pair.undercover, pair.anime2),
+    ]);
+    pair.civilianImg = img1;
+    pair.undercoverImg = img2;
+
     const players = Object.keys(room.players).filter(p => room.players[p].connected);
     const mrwEnabled = (mrWhite !== undefined ? mrWhite : room.mrWhite) && players.length >= 5;
     const shuffled = [...players].sort(() => Math.random() - .5);
     const assignments = {};
     shuffled.forEach((p, i) => {
-      if (i === 0) assignments[p] = { role:'undercover', word:pair.undercover };
-      else if (i === 1 && mrwEnabled) assignments[p] = { role:'mr-white', word:null };
-      else assignments[p] = { role:'civilian', word:pair.civilian };
+      if (i === 0) assignments[p] = { role:'undercover', word:pair.undercover, image:pair.undercoverImg };
+      else if (i === 1 && mrwEnabled) assignments[p] = { role:'mr-white', word:null, image:null };
+      else assignments[p] = { role:'civilian', word:pair.civilian, image:pair.civilianImg };
     });
 
     room.wordPair = pair; room.assignments = assignments;

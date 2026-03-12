@@ -658,6 +658,38 @@ io.on('connection', (socket) => {
     broadcastRoom(code);
   });
 
+  // ══════════════════════════════════════
+  //  WEBRTC SIGNALING (relay only)
+  // ══════════════════════════════════════
+
+  socket.on('rtc:offer', ({ to, offer }) => {
+    const { name, code } = socket.data || {};
+    const target = [...io.sockets.sockets.values()].find(s => s.data?.name === to && s.data?.code === code);
+    if (target) target.emit('rtc:offer', { from: name, offer });
+  });
+
+  socket.on('rtc:answer', ({ to, answer }) => {
+    const { name, code } = socket.data || {};
+    const target = [...io.sockets.sockets.values()].find(s => s.data?.name === to && s.data?.code === code);
+    if (target) target.emit('rtc:answer', { from: name, answer });
+  });
+
+  socket.on('rtc:ice', ({ to, candidate }) => {
+    const { name, code } = socket.data || {};
+    const target = [...io.sockets.sockets.values()].find(s => s.data?.name === to && s.data?.code === code);
+    if (target) target.emit('rtc:ice', { from: name, candidate });
+  });
+
+  socket.on('rtc:ready', () => {
+    const { name, code } = socket.data || {};
+    if (name && code) socket.to(code).emit('rtc:peer_joined', { name });
+  });
+
+  socket.on('rtc:leave', () => {
+    const { name, code } = socket.data || {};
+    if (name && code) socket.to(code).emit('rtc:peer_left', { name });
+  });
+
 });
 
 // ═══════════════════════════════

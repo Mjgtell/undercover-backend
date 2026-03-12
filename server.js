@@ -126,7 +126,7 @@ function genCode() {
 }
 
 function sanitizeRoom(room) {
-  const r = { ...room, players: {}, spectators: room.spectators || [] };
+  const r = { ...room, players: {}, spectators: room.spectators || [], turnOrder: room.turnOrder || [] };
   for (const [n, p] of Object.entries(room.players)) {
     r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready, voted: p.voted, isSpectator: p.isSpectator || false };
   }
@@ -168,10 +168,17 @@ function startTimer(code, seconds, phase) {
       const rk = `round${r.round}`;
       if (!r.words[rk]) r.words[rk] = {};
       getAlive(r).forEach(n => { if (!r.words[rk][n]) r.words[rk][n] = '…'; });
-      io.to(code).emit('words:all_submitted', { round: r.round, words: r.words[rk] });
-      r.subPhase = 'vote';
-      broadcastRoom(code);
-      startTimer(code, VOTE_TIMER_SECS, 'vote');
+      io.to(code).emit('words:all_submitted', { round: r.round });
+
+      const votingLocked = r.round < (r.votingUnlockedAtRound || 2);
+      if (votingLocked) {
+        io.to(code).emit('toast', `Tour ${r.round} terminé — tour ${r.round + 1} !`);
+        setTimeout(() => nextRound(r, code), 1200);
+      } else {
+        r.subPhase = 'vote';
+        broadcastRoom(code);
+        startTimer(code, VOTE_TIMER_SECS, 'vote');
+      }
     } else if (phase === 'vote') {
       // Auto-eliminate highest voted or random alive
       const alive = getAlive(r);
@@ -381,6 +388,8 @@ io.on('connection', (socket) => {
     room.wordPair = pair; room.assignments = assignments;
     room.phase = 'reveal'; room.round = 1; room.words = {}; room.votes = {}; room.accusations = {};
     room.subPhase = 'words'; room.mrWhiteGuessPhase = false;
+    room.turnOrder = shuffled; // random order locked at game start
+    room.votingUnlockedAtRound = 2; // vote only available from round 2
     Object.keys(room.players).forEach(p => { room.players[p].ready = room.players[p].isSpectator; room.players[p].voted = false; });
 
     shuffled.forEach(pName => { findSocket(pName, code)?.emit('your:assignment', assignments[pName]); });
@@ -438,10 +447,18 @@ io.on('connection', (socket) => {
     if (alive.length > 0 && alive.every(n => room.words[rk][n])) {
       clearTimer(code);
       io.to(code).emit('words:all_submitted', { round: room.round });
-      room.subPhase = 'vote';
-      Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
-      broadcastRoom(code);
-      if (room.settings.wordTimer) startTimer(code, VOTE_TIMER_SECS, 'vote');
+
+      // 2-round minimum: if we haven't reached votingUnlockedAtRound yet, go to next round
+      const votingLocked = room.round < (room.votingUnlockedAtRound || 2);
+      if (votingLocked) {
+        io.to(code).emit('toast', `Tour ${room.round} terminé — tour ${room.round + 1} !`);
+        setTimeout(() => nextRound(room, code), 1200);
+      } else {
+        room.subPhase = 'vote';
+        Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
+        broadcastRoom(code);
+        if (room.settings.wordTimer) startTimer(code, VOTE_TIMER_SECS, 'vote');
+      }
     }
   });
 
@@ -480,6 +497,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── HOST OVERRIDE ELIMINATE ──
+  socket.on('vote:eliminate', ({ target }) => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name) return;
+    if (!room.players[target] || room.players[target].eliminated) return;
+    clearTimer(code);
+    eliminatePlayer(room, target, code);
+  });
+
   // ── HOST BREAKS TIE ──
   socket.on('vote:tiebreak', ({ target }) => {
     const { name, code } = socket.data || {};
@@ -506,7 +533,7 @@ io.on('connection', (socket) => {
     clearTimer(code);
     room.phase = 'lobby'; room.assignments = {}; room.wordPair = null;
     room.words = {}; room.votes = {}; room.accusations = {}; room.round = 1;
-    room.mrWhiteGuessPhase = false; room.subPhase = 'words';
+    room.mrWhiteGuessPhase = false; room.subPhase = 'words'; room.turnOrder = [];
     room.timerEnd = null; room.timerPhase = null;
     // Remove spectators from players, keep real players
     Object.keys(room.players).forEach(p => {

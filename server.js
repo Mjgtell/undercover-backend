@@ -15,88 +15,155 @@ const io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] } 
 // ═══════════════════════════════
 const PAIRS = {
   shonen: [
-    { civilian:'Naruto Uzumaki', undercover:'Izuku Midoriya', anime1:'Naruto', anime2:'My Hero Academia', hint:'Héros déterminés partis de rien' },
-    { civilian:'Goku', undercover:'Saitama', anime1:'Dragon Ball Z', anime2:'One Punch Man', hint:'Guerriers surpuissants qui adorent se battre' },
-    { civilian:'Monkey D. Luffy', undercover:'Asta', anime1:'One Piece', anime2:'Black Clover', hint:'Capitaines fous qui veulent être les meilleurs' },
-    { civilian:'Levi Ackerman', undercover:'Zoro', anime1:'Attack on Titan', anime2:'One Piece', hint:'Combattants froids et ultra-compétents' },
-    { civilian:'Tanjiro Kamado', undercover:'Zenitsu Agatsuma', anime1:'Demon Slayer', anime2:'Demon Slayer', hint:'Pourfendeurs de démons dans la même troupe' },
-    { civilian:'Itachi Uchiha', undercover:'Aizen Sosuke', anime1:'Naruto', anime2:'Bleach', hint:'Géniaux traîtres au plan caché' },
-    { civilian:'Sasuke Uchiha', undercover:'Vegeta', anime1:'Naruto', anime2:'Dragon Ball Z', hint:'Rivaux orgueilleux du héros principal' },
-    { civilian:'Edward Elric', undercover:'Alphonse Elric', anime1:'Fullmetal Alchemist', anime2:'Fullmetal Alchemist', hint:'Frères alchimistes en quête de rédemption' },
-    { civilian:'Ichigo Kurosaki', undercover:'Yusuke Urameshi', anime1:'Bleach', anime2:'Yu Yu Hakusho', hint:'Ados avec des pouvoirs de l\'au-delà' },
-    { civilian:'Killua Zoldyck', undercover:'Feitan', anime1:'Hunter x Hunter', anime2:'Hunter x Hunter', hint:'Assassins froids aux réflexes surhumains' },
-    { civilian:'Yuji Itadori', undercover:'Denji', anime1:'Jujutsu Kaisen', anime2:'Chainsaw Man', hint:'Porteurs d\'un démon intérieur dévastateur' },
-    { civilian:'Eren Yeager', undercover:'Kaneki Ken', anime1:'Attack on Titan', anime2:'Tokyo Ghoul', hint:'Protagonistes qui basculent dans la noirceur' },
-    { civilian:'Natsu Dragneel', undercover:'Ace Portgas', anime1:'Fairy Tail', anime2:'One Piece', hint:'Utilisateurs de feu aux cheveux flashy' },
-    { civilian:'Gon Freecss', undercover:'Meruem', anime1:'Hunter x Hunter', anime2:'Hunter x Hunter', hint:'Êtres purs aux capacités hors normes' },
-    { civilian:'Ryomen Sukuna', undercover:'Muzan Kibutsuji', anime1:'Jujutsu Kaisen', anime2:'Demon Slayer', hint:'Grands antagonistes quasi-immortels' },
-    { civilian:'Gojo Satoru', undercover:'Kakashi Hatake', anime1:'Jujutsu Kaisen', anime2:'Naruto', hint:'Sensei masqués les plus puissants de leur univers' },
-    { civilian:'Shanks', undercover:'Whitebeard', anime1:'One Piece', anime2:'One Piece', hint:'Empereurs de la mer au charisme légendaire' },
+    // Héros solaires qui sourient même dans la douleur, puissance née de la volonté pure
+    { civilian:'Naruto Uzumaki', undercover:'Izuku Midoriya', anime1:'Naruto', anime2:'My Hero Academia', hint:'Héros rejetés devenus symboles d\'espoir' },
+    // Deux garçons calmes, cheveux sombres, pouvoirs surnaturels liés à la mort, aura bleue/froide
+    { civilian:'Tanjiro Kamado', undercover:'Yusuke Urameshi', anime1:'Demon Slayer', anime2:'Yu Yu Hakusho', hint:'Garçons bienveillants devenus chasseurs de démons' },
+    // Deux rivaux froids, cheveux sombres dressés, regard intense, ego de guerrier
+    { civilian:'Sasuke Uchiha', undercover:'Vegeta', anime1:'Naruto', anime2:'Dragon Ball Z', hint:'Rivaux orgueilleux obsédés par la puissance' },
+    // Deux guerriers petits mais dévastateurs, regard d'acier, réputation de massacre
+    { civilian:'Levi Ackerman', undercover:'Killua Zoldyck', anime1:'Attack on Titan', anime2:'Hunter x Hunter', hint:'Tueurs froids à la vitesse surhumaine' },
+    // Deux capitaines fous, sourire constant, corps élastique/libre, vivent pour l'aventure
+    { civilian:'Monkey D. Luffy', undercover:'Gon Freecss', anime1:'One Piece', anime2:'Hunter x Hunter', hint:'Garçons solaires à la force brute et pure' },
+    // Deux êtres surpuissants décontractés, bras croisés, personne ne peut les toucher
+    { civilian:'Gojo Satoru', undercover:'Saitama', anime1:'Jujutsu Kaisen', anime2:'One Punch Man', hint:'Les plus forts de leur monde, mais détachés' },
+    // Deux protagonistes qui basculent dans la noirceur, transformation physique, perte d'humanité
+    { civilian:'Eren Yeager', undercover:'Kaneki Ken', anime1:'Attack on Titan', anime2:'Tokyo Ghoul', hint:'Jeunes hommes consumés par leur propre monstre' },
+    // Deux génies froids qui planifient tout, trahison/sacrifice, portent des masques émotionnels
+    { civilian:'Itachi Uchiha', undercover:'Aizen Sosuke', anime1:'Naruto', anime2:'Bleach', hint:'Géniaux traîtres au sacrifice calculé' },
+    // Deux porteurs d'un être destructeur en eux, corps impulsif, pouvoir incontrôlable
+    { civilian:'Yuji Itadori', undercover:'Denji', anime1:'Jujutsu Kaisen', anime2:'Chainsaw Man', hint:'Hôtes d\'une entité dévastatrice' },
+    // Deux petits protagonistes blonds, amputés ou marqués, alchimie vs magie, quête de rédemption
+    { civilian:'Edward Elric', undercover:'Asta', anime1:'Fullmetal Alchemist', anime2:'Black Clover', hint:'Petits blondins déterminés malgré tout' },
+    // Deux antagonistes ultimes, aristocratiques, pouvoirs de régénération absolue
+    { civilian:'Ryomen Sukuna', undercover:'Muzan Kibutsuji', anime1:'Jujutsu Kaisen', anime2:'Demon Slayer', hint:'Rois des démons quasi-immortels' },
+    // Deux guerriers rouges au feu, cheveux vifs, chaleur et impulsivité
+    { civilian:'Natsu Dragneel', undercover:'Portgas D. Ace', anime1:'Fairy Tail', anime2:'One Piece', hint:'Utilisateurs de flammes aux cheveux sombres' },
+    // Deux hommes au regard impassible, masque/chapeau, enseignent en cachant leur vraie force
+    { civilian:'Kakashi Hatake', undercover:'Aizawa Shouta', anime1:'Naruto', anime2:'My Hero Academia', hint:'Profs nonchalants qui cachent une puissance réelle' },
   ],
+
   fantasy: [
-    { civilian:'Kirito', undercover:'Bell Cranel', anime1:'Sword Art Online', anime2:'DanMachi', hint:'Épéistes solitaires dans un monde de jeu' },
-    { civilian:'Subaru Natsuki', undercover:'Naofumi Iwatani', anime1:'Re:Zero', anime2:'Shield Hero', hint:'Isekai protagonistes qui souffrent beaucoup' },
-    { civilian:'Ainz Ooal Gown', undercover:'Rimuru Tempest', anime1:'Overlord', anime2:'Tensura', hint:'Overpowered dans un monde fantastique' },
-    { civilian:'Rudeus Greyrat', undercover:'Kazuma Sato', anime1:'Mushoku Tensei', anime2:'KonoSuba', hint:'Réincarnés dans un monde de magie' },
-    { civilian:'Emilia', undercover:'Rem', anime1:'Re:Zero', anime2:'Re:Zero', hint:'Héroïnes de Re:Zero aux pouvoirs magiques' },
-    { civilian:'Asuna Yuuki', undercover:'Eris', anime1:'Sword Art Online', anime2:'KonoSuba', hint:'Guerrières compétentes en monde fantaisie' },
-    { civilian:'Zero Two', undercover:'Violet Evergarden', anime1:'Darling in the FranXX', anime2:'Violet Evergarden', hint:'Filles mystérieuses qui découvrent les émotions' },
-    { civilian:'Shiroe', undercover:'Momonga', anime1:'Log Horizon', anime2:'Overlord', hint:'Stratèges bloqués dans un MMORPG' },
-    { civilian:'Raphtalia', undercover:'Filo', anime1:'Shield Hero', anime2:'Shield Hero', hint:'Compagnes dévouées du héros bouclier' },
-    { civilian:'Aqua', undercover:'Wiz', anime1:'KonoSuba', anime2:'KonoSuba', hint:'Magiciennes liées à l\'eau et aux esprits' },
-  ],
-  action: [
-    { civilian:'Levi Ackerman', undercover:'Mikasa Ackerman', anime1:'Attack on Titan', anime2:'Attack on Titan', hint:'Guerriers Ackerman redoutables' },
-    { civilian:'Megumi Fushiguro', undercover:'Yuta Okkotsu', anime1:'Jujutsu Kaisen', anime2:'Jujutsu Kaisen', hint:'Exorcistes calmes aux pouvoirs rares' },
-    { civilian:'Gojo Satoru', undercover:'Whitebeard', anime1:'Jujutsu Kaisen', anime2:'One Piece', hint:'Les plus forts de leur univers' },
-    { civilian:'Denji', undercover:'Power', anime1:'Chainsaw Man', anime2:'Chainsaw Man', hint:'Démons chaotiques qui aiment le sang' },
-    { civilian:'Shigaraki Tomura', undercover:'Mahito', anime1:'My Hero Academia', anime2:'Jujutsu Kaisen', hint:'Antagonistes qui détruisent ce qu\'ils touchent' },
-    { civilian:'Ken Kaneki', undercover:'Haise Sasaki', anime1:'Tokyo Ghoul', anime2:'Tokyo Ghoul', hint:'Même personnage deux identités' },
-    { civilian:'Muichiro Tokito', undercover:'Giyu Tomioka', anime1:'Demon Slayer', anime2:'Demon Slayer', hint:'Piliers au regard vide et froid' },
-    { civilian:'Ryuko Matoi', undercover:'Satsuki Kiryuin', anime1:'Kill la Kill', anime2:'Kill la Kill', hint:'Rivales en uniformes surpuissants' },
-    { civilian:'Akame', undercover:'Esdeath', anime1:'Akame ga Kill', anime2:'Akame ga Kill', hint:'Tueuses redoutables à l\'épée' },
-    { civilian:'Himeko Toga', undercover:'Dabi', anime1:'My Hero Academia', anime2:'My Hero Academia', hint:'Vilains instables avec un passé sombre' },
-  ],
-  romance: [
-    { civilian:'Taiga Aisaka', undercover:'Chitoge Kirisaki', anime1:'Toradora', anime2:'Nisekoi', hint:'Tsundere au caractère explosif' },
-    { civilian:'Ryuji Takasu', undercover:'Raku Ichijo', anime1:'Toradora', anime2:'Nisekoi', hint:'Garçons doux coincés dans des romances chaotiques' },
-    { civilian:'Kousei Arima', undercover:'Rei Kiriyama', anime1:'Your Lie in April', anime2:'March Comes in Like a Lion', hint:'Prodiges solitaires au passé douloureux' },
-    { civilian:'Tohru Honda', undercover:'Rikka Takanashi', anime1:'Fruits Basket', anime2:'Chunibyo', hint:'Filles étranges et attachantes' },
-    { civilian:'Holo', undercover:'Raphtalia', anime1:'Spice & Wolf', anime2:'Shield Hero', hint:'Filles-renard loyales à leur compagnon' },
-    { civilian:'Miyamura Izumi', undercover:'Handa Sei', anime1:'Horimiya', anime2:'Barakamon', hint:'Introvertis qui s\'épanouissent' },
-    { civilian:'Shouko Nishimiya', undercover:'Mei Tachibana', anime1:'A Silent Voice', anime2:'Say I Love You', hint:'Filles discrètes qui apprennent à faire confiance' },
-    { civilian:'Shoya Ishida', undercover:'Takeo Goda', anime1:'A Silent Voice', anime2:'My Love Story', hint:'Garçons maladroits qui se rachètent par amour' },
-    { civilian:'Kaori Miyazono', undercover:'Menma', anime1:'Your Lie in April', anime2:'AnoHana', hint:'Filles lumineuses au destin tragique' },
-    { civilian:'Kyo Sohma', undercover:'Yato', anime1:'Fruits Basket', anime2:'Noragami', hint:'Garçons brusques avec un secret douloureux' },
-  ],
-  sports: [
-    { civilian:'Shoyo Hinata', undercover:'Tetsuya Kuroko', anime1:'Haikyuu', anime2:'Kuroko Basketball', hint:'Petits joueurs invisibles aux grands impacts' },
-    { civilian:'Tobio Kageyama', undercover:'Seijuro Akashi', anime1:'Haikyuu', anime2:'Kuroko Basketball', hint:'Génies froids qui commandent leur équipe' },
-    { civilian:'Yoichi Isagi', undercover:'Noel Noa', anime1:'Blue Lock', anime2:'Blue Lock', hint:'Stratèges du foot à l\'instinct dévastateur' },
-    { civilian:'Ippo Makunouchi', undercover:'Takeshi Sendo', anime1:'Hajime no Ippo', anime2:'Hajime no Ippo', hint:'Boxeurs au style offensif dévastateur' },
-    { civilian:'Ryoma Echizen', undercover:'Kunimitsu Tezuka', anime1:'Prince of Tennis', anime2:'Prince of Tennis', hint:'Génies du tennis au regard impassible' },
-    { civilian:'Sakuragi Hanamichi', undercover:'Takenori Akagi', anime1:'Slam Dunk', anime2:'Slam Dunk', hint:'Piliers de Shohoku au caractère fort' },
-    { civilian:'Tsubasa Ozora', undercover:'Kojiro Hyuga', anime1:'Captain Tsubasa', anime2:'Captain Tsubasa', hint:'Attaquants de foot au shoot surpuissant' },
-    { civilian:'Yuri Katsuki', undercover:'Victor Nikiforov', anime1:'Yuri on Ice', anime2:'Yuri on Ice', hint:'Patineurs d\'élite au style élégant' },
-    { civilian:'Seishiro Nagi', undercover:'Reo Mikage', anime1:'Blue Lock', anime2:'Blue Lock', hint:'Duo de Blue Lock aux styles opposés' },
-    { civilian:'Eijun Sawamura', undercover:'Haruichi Kominato', anime1:'Diamond no Ace', anime2:'Diamond no Ace', hint:'Coéquipiers de baseball aux styles contrastés' },
-  ],
-  mix: [
-    { civilian:'L Lawliet', undercover:'Lelouch vi Britannia', anime1:'Death Note', anime2:'Code Geass', hint:'Géniaux stratèges qui manipulent les autres' },
-    { civilian:'Light Yagami', undercover:'Lelouch vi Britannia', anime1:'Death Note', anime2:'Code Geass', hint:'Protagonistes qui jouent à être des dieux' },
-    { civilian:'Spike Spiegel', undercover:'Vash the Stampede', anime1:'Cowboy Bebop', anime2:'Trigun', hint:'Pistoleros cool avec un passé douloureux' },
-    { civilian:'Motoko Kusanagi', undercover:'Revy', anime1:'Ghost in the Shell', anime2:'Black Lagoon', hint:'Femmes badass hyper-compétentes et cyniques' },
-    { civilian:'Shikamaru Nara', undercover:'Ciel Phantomhive', anime1:'Naruto', anime2:'Black Butler', hint:'Stratèges froids qui manipulent l\'échiquier' },
+    // Deux épéistes solitaires dans un monde de jeu/donjon, noirs vêtus, yeux vides mais déterminés
+    { civilian:'Kirito', undercover:'Bell Cranel', anime1:'Sword Art Online', anime2:'DanMachi', hint:'Épéistes solitaires progressant dans un donjon' },
+    // Deux isekai qui souffrent à répétition, réinitialisations/revivre la mort, psychologie brisée
+    { civilian:'Subaru Natsuki', undercover:'Naofumi Iwatani', anime1:'Re:Zero', anime2:'Shield Hero', hint:'Isekai traités injustement qui repartent de zéro' },
+    // Deux seigneurs tout-puissants dans un monde fantastique, froids, manipulateurs mais complexes
+    { civilian:'Ainz Ooal Gown', undercover:'Lelouch vi Britannia', anime1:'Overlord', anime2:'Code Geass', hint:'Stratèges masqués qui jouent aux échecs avec des vies' },
+    // Deux filles mystérieuses non-humaines, longues tresses, regard distant, découvrent les émotions
+    { civilian:'Zero Two', undercover:'Violet Evergarden', anime1:'Darling in the FranXX', anime2:'Violet Evergarden', hint:'Filles hybrides qui apprennent à être humaines' },
+    // Deux magiciens overpowered réincarnés, vie précédente de gamer, nouveau monde de magie
+    { civilian:'Rudeus Greyrat', undercover:'Rimuru Tempest', anime1:'Mushoku Tensei', anime2:'Tensura', hint:'Réincarnés overpowered qui construisent leur empire' },
+    // Deux filles-renard, oreilles et queue, loyales et espièles, lien fort avec leur compagnon
+    { civilian:'Holo', undercover:'Raphtalia', anime1:'Spice & Wolf', anime2:'Shield Hero', hint:'Bêtes-humaines loyales à leur partenaire' },
+    // Deux stratèges cérébaux bloqués dans un monde de jeu, lunettes ou regard calculateur
+    { civilian:'Shiroe', undercover:'Sora', anime1:'Log Horizon', anime2:'No Game No Life', hint:'Gamers stratèges qui dominent leur monde' },
+    // Deux héroïnes cheveux bleus, calmes, dévouées, pouvoirs de glace ou d'eau
+    { civilian:'Rem', undercover:'Aqua', anime1:'Re:Zero', anime2:'KonoSuba', hint:'Filles aux pouvoirs de froid/eau dans un isekai' },
+    // Deux chevaliers en armure, sens de l'honneur absolu, servent leur maître corps et âme
     { civilian:'Saber', undercover:'Erza Scarlet', anime1:'Fate/stay night', anime2:'Fairy Tail', hint:'Guerrières en armure à l\'honneur inflexible' },
-    { civilian:'Roy Mustang', undercover:'Endeavor', anime1:'Fullmetal Alchemist', anime2:'My Hero Academia', hint:'Héros pyrokinésistes ambitieux et froids' },
-    { civilian:'Kakashi Hatake', undercover:'Aizawa Shouta', anime1:'Naruto', anime2:'My Hero Academia', hint:'Professeurs cools et légèrement nonchalants' },
-    { civilian:'Jotaro Kujo', undercover:'Giorno Giovanna', anime1:'JoJo Part 3', anime2:'JoJo Part 5', hint:'Protagonistes JoJo au calme intimidant' },
-    { civilian:'Dio Brando', undercover:'Kars', anime1:'JoJo Part 1/3', anime2:'JoJo Part 2', hint:'Antagonistes JoJo qui veulent l\'immortalité' },
-    { civilian:'Rintaro Okabe', undercover:'Hachiman Hikigaya', anime1:'Steins;Gate', anime2:'OreGairu', hint:'Inadaptés sociaux au monologue intérieur riche' },
-    { civilian:'Yato', undercover:'Hiei', anime1:'Noragami', anime2:'Yu Yu Hakusho', hint:'Esprits sombres au regard tranchant' },
-    { civilian:'Shinji Ikari', undercover:'Makoto Naegi', anime1:'Evangelion', anime2:'Danganronpa', hint:'Garçons ordinaires dans des situations extrêmes' },
-    { civilian:'Usagi Tsukino', undercover:'Nanoha Takamachi', anime1:'Sailor Moon', anime2:'Magical Girl Lyrical Nanoha', hint:'Magical girls qui défendent la Terre' },
-    { civilian:'Edward Elric', undercover:'Roy Mustang', anime1:'Fullmetal Alchemist', anime2:'Fullmetal Alchemist', hint:'Alchimistes militaires aux objectifs liés' },
+    // Deux protagonistes isekai comiques, malchanceux mais débrouillards
+    { civilian:'Kazuma Sato', undercover:'Hajime Nagumo', anime1:'KonoSuba', anime2:'Arifureta', hint:'Isekai rejetés par leur équipe qui s\'en sortent quand même' },
+  ],
+
+  action: [
+    // Deux détectives génies opposés, l'un assis bizarrement, l'autre debout, guerre psychologique
+    { civilian:'L Lawliet', undercover:'Shikamaru Nara', anime1:'Death Note', anime2:'Naruto', hint:'Génies paresseux en apparence, redoutables en vrai' },
+    // Deux tireurs d'élite froids, visage émacié, yeux enfoncés, silhouette longiligne
+    { civilian:'Aizen Sosuke', undercover:'Griffith', anime1:'Bleach', anime2:'Berserk', hint:'Anges déchus au plan millénaire et au sourire glacial' },
+    // Deux guerriers solitaires en noir, cicatrices, code moral strict, combattent seuls
+    { civilian:'Zoro', undercover:'Guts', anime1:'One Piece', anime2:'Berserk', hint:'Combattants à l\'épée solitaires et marqués' },
+    // Deux antagonistes au sourire diabolique, manipulation, société corrompue = leur terrain
+    { civilian:'Shigaraki Tomura', undercover:'Griffith', anime1:'My Hero Academia', anime2:'Berserk', hint:'Antagonistes qui veulent détruire l\'ordre établi' },
+    // Deux exorcistes aux pouvoirs rares, cheveux sombres, austères, techniques spéciales
+    { civilian:'Megumi Fushiguro', undercover:'Byakuya Kuchiki', anime1:'Jujutsu Kaisen', anime2:'Bleach', hint:'Guerriers aristocratiques froids aux pouvoirs de convocation' },
+    // Deux pyrokinésistes militaires ambitieux, rouge/flamme, père absent ou ennemi
+    { civilian:'Roy Mustang', undercover:'Endeavor', anime1:'Fullmetal Alchemist', anime2:'My Hero Academia', hint:'Héros pyrokinésistes ambitieux et mauvais pères' },
+    // Deux femmes soldats ultimes, cheveux courts, pragmatiques, corps modifié
+    { civilian:'Mikasa Ackerman', undercover:'Motoko Kusanagi', anime1:'Attack on Titan', anime2:'Ghost in the Shell', hint:'Soldates froides au corps modifié, protègent leur prochain' },
+    // Deux piliers calmes, cheveux longs ou attachés, technique parfaite, disent peu
+    { civilian:'Giyu Tomioka', undercover:'Neji Hyuga', anime1:'Demon Slayer', anime2:'Naruto', hint:'Combattants d\'élite froids au style technique parfait' },
+    // Deux petits psychiques, expression neutre, destruction à distance sans effort
+    { civilian:'Mob', undercover:'Tatsumaki', anime1:'Mob Psycho 100', anime2:'One Punch Man', hint:'Psychiques overpowered qui semblent absents' },
+    // Deux anti-héros aux pouvoirs de destruction totale, isolés, incompris
+    { civilian:'Accelerator', undercover:'Hisoka Morow', anime1:'A Certain Magical Index', anime2:'Hunter x Hunter', hint:'Êtres supérieurs dérangés qui cherchent une vraie bataille' },
+  ],
+
+  romance: [
+    // Deux tsundere blondes explos, petite taille complexée, tombe amoureuse malgré elle
+    { civilian:'Taiga Aisaka', undercover:'Erina Nakiri', anime1:'Toradora', anime2:'Shokugeki no Soma', hint:'Blondes hautaines au cœur tendre caché' },
+    // Deux garçons cyniques mal dans leur peau, monologue intérieur acéré, rejet du monde
+    { civilian:'Hachiman Hikigaya', undercover:'Rei Kiriyama', anime1:'OreGairu', anime2:'March Comes in Like a Lion', hint:'Solitaires intelligents qui observent sans participer' },
+    // Deux prodiges musicaux traumatisés par leur mère, doigts qui tremblent, larmes sur les touches
+    { civilian:'Kousei Arima', undercover:'Shinichi Chiaki', anime1:'Your Lie in April', anime2:'Nodame Cantabile', hint:'Pianistes prodiges brisés qui se reconstruisent' },
+    // Deux filles discrètes blessées par le passé, communication difficile, lien inattendu
+    { civilian:'Shouko Nishimiya', undercover:'Mei Tachibana', anime1:'A Silent Voice', anime2:'Say I Love You', hint:'Filles solitaires qui apprennent la confiance' },
+    // Deux garçons ordinaires qui se sacrifient pour leur amour, maladroits mais sincères
+    { civilian:'Shoya Ishida', undercover:'Takeo Goda', anime1:'A Silent Voice', anime2:'My Love Story', hint:'Garçons brisés qui se rachètent par amour sincère' },
+    // Deux filles solaires au destin tragique, apportent la lumière puis disparaissent
+    { civilian:'Kaori Miyazono', undercover:'Menma', anime1:'Your Lie in April', anime2:'AnoHana', hint:'Filles lumineuses arrachées trop tôt' },
+    // Deux couples fusionnels bizarre-normal, l'un étrange, l'autre grounded
+    { civilian:'Tohru Honda', undercover:'Oreki Houtarou', anime1:'Fruits Basket', anime2:'Hyouka', hint:'Personnages lumineux/sombres qui s\'équilibrent' },
+    // Deux garçons introvertis tatoués ou marqués, cachent une vraie tendresse
+    { civilian:'Miyamura Izumi', undercover:'Nishikata', anime1:'Horimiya', anime2:'Karakai Jouzu no Takagi-san', hint:'Garçons introvertis qui s\'ouvrent à une seule personne' },
+    // Deux filles espionnes ou doubles visages, adorables dehors, calculatrices dedans
+    { civilian:'Yor Forger', undercover:'Himeno', anime1:'Spy x Family', anime2:'Chainsaw Man', hint:'Femmes douces en apparence, tueuses de métier' },
+    // Deux romances interclasses, différence de statut, tension entre devoir et sentiment
+    { civilian:'Kaguya Shinomiya', undercover:'Yukino Yukinoshita', anime1:'Kaguya-sama', anime2:'OreGairu', hint:'Héritières froides qui tombent amoureuses malgré leur fierté' },
+  ],
+
+  sports: [
+    // Deux petits joueurs discrets, visibles seulement à l'impact, changent les matchs en secret
+    { civilian:'Shoyo Hinata', undercover:'Tetsuya Kuroko', anime1:'Haikyuu', anime2:'Kuroko Basketball', hint:'Petits joueurs invisibles au grand impact' },
+    // Deux génies froids qui commandent le terrain, regard perçant, équipe obéit sans discuter
+    { civilian:'Tobio Kageyama', undercover:'Seijuro Akashi', anime1:'Haikyuu', anime2:'Kuroko Basketball', hint:'Génies du terrain qui contrôlent tout' },
+    // Deux attaquants au tir dévastateur, égoïstes assumés, leur puissance est leur identité
+    { civilian:'Yoichi Isagi', undercover:'Ryota Kise', anime1:'Blue Lock', anime2:'Kuroko Basketball', hint:'Attaquants offensifs avec une technique de copie/analyse' },
+    // Deux boxeurs au style offensif brut, partis de rien, cœur de lion
+    { civilian:'Ippo Makunouchi', undercover:'Joe Yabuki', anime1:'Hajime no Ippo', anime2:'Ashita no Joe', hint:'Boxeurs du peuple montant du bas par pur acharnement' },
+    // Deux joueurs de raquette génies arrogants, aucun doute sur leur supériorité
+    { civilian:'Ryoma Echizen', undercover:'Eiichirou Maruo', anime1:'Prince of Tennis', anime2:'Baby Steps', hint:'Adolescents au talent brut qui dominent la raquette' },
+    // Deux pivots physiques impressionnants, présence brute, ancre de l'équipe
+    { civilian:'Takenori Akagi', undercover:'Ushijima Wakatoshi', anime1:'Slam Dunk', anime2:'Haikyuu', hint:'Piliers physiques intransigeants et imposants' },
+    // Deux ace solitaires au shoot parfait, peu loquaces, résultats parlent
+    { civilian:'Eijun Sawamura', undercover:'Furuya Satoru', anime1:'Diamond no Ace', anime2:'Diamond no Ace', hint:'Lanceurs opposés, gauche vs droite, feu vs glace' },
+    // Deux outsiders qui redéfinissent leur sport par la donnée/l'analyse
+    { civilian:'Wataru Kuramochi', undercover:'Hanamichi Sakuragi', anime1:'Diamond no Ace', anime2:'Slam Dunk', hint:'Athlètes bruyants à l\'énergie débordante mais maladroits' },
+    // Deux duos de sport de glisse/vitesse, style élégant, perfection technique
+    { civilian:'Yuri Katsuki', undercover:'Noya Libero', anime1:'Yuri on Ice', anime2:'Haikyuu', hint:'Petits gabarits aux réflexes parfaits, techniques de précision' },
+    // Deux génie de mur défensif, leur valeur niée, finissent essentiels
+    { civilian:'Seishiro Nagi', undercover:'Reo Mikage', anime1:'Blue Lock', anime2:'Blue Lock', hint:'Duo Blue Lock : le génie brut et le stratège raffiné' },
+  ],
+
+  mix: [
+    // Deux génies de la manipulation, assis bizarrement, tout le monde est leur pion
+    { civilian:'L Lawliet', undercover:'Shikamaru Nara', anime1:'Death Note', anime2:'Naruto', hint:'Génies paresseux qui voient 10 coups d\'avance' },
+    // Deux protagonistes qui jouent à être des dieux, notes de mort/géass, condamnés par leur propre arme
+    { civilian:'Light Yagami', undercover:'Lelouch vi Britannia', anime1:'Death Note', anime2:'Code Geass', hint:'Justiciers déchus qui se prennent pour des dieux' },
+    // Deux cowboys de l'espace détachés, cigarette/posture, passé qu'ils fuient
+    { civilian:'Spike Spiegel', undercover:'Vash the Stampede', anime1:'Cowboy Bebop', anime2:'Trigun', hint:'Tireurs vagabonds au passé douloureux et au sourire triste' },
+    // Deux femmes cyborgs/soldates froides, cheveux courts, efficacité pure
+    { civilian:'Motoko Kusanagi', undercover:'Revy', anime1:'Ghost in the Shell', anime2:'Black Lagoon', hint:'Femmes armées froides et cyniques au corps de combat' },
+    // Deux protagonistes ordinaires dans des situations de mort extraordinaires, ni super ni chanceux
+    { civilian:'Shinji Ikari', undercover:'Makoto Naegi', anime1:'Evangelion', anime2:'Danganronpa', hint:'Garçons ordinaires jetés dans un monde qui veut les tuer' },
+    // Deux esprits/dieux mineurs, sombres, pouvoirs de vitesse/ombre, font peur mais cachent un cœur
+    { civilian:'Yato', undercover:'Hiei', anime1:'Noragami', anime2:'Yu Yu Hakusho', hint:'Esprits sombres et rapides au cœur insoupçonné' },
+    // Deux inventeurs fous du temps/dimension, monologue intérieur de génie, incompris de tous
+    { civilian:'Rintaro Okabe', undercover:'Senku Ishigami', anime1:'Steins;Gate', anime2:'Dr. Stone', hint:'Génies scientifiques dramatiques qui sauvent l\'humanité' },
+    // Deux magical girls contrairement au cliché, uniforme sombre, pouvoirs lourds à porter
+    { civilian:'Homura Akemi', undercover:'Satsuki Kiryuin', anime1:'Puella Magi Madoka', anime2:'Kill la Kill', hint:'Guerrières froides au plan sacrificiel secret' },
+    // Deux protagonistes JoJo au calme intimidant, étudiants en apparence
+    { civilian:'Jotaro Kujo', undercover:'Giorno Giovanna', anime1:'JoJo Part 3', anime2:'JoJo Part 5', hint:'Protagonistes JoJo au calme glacial et au style parfait' },
+    // Deux génies solitaires du jeu, capables de tout retourner seuls
+    { civilian:'Sora', undercover:'Ayanokoji Kiyotaka', anime1:'No Game No Life', anime2:'Classroom of the Elite', hint:'Génies qui jouent à perdre pour mieux gagner' },
+    // Deux combattants petits mais hyper rapides, armés de lames, regard vide
+    { civilian:'Levi Ackerman', undercover:'Zoro', anime1:'Attack on Titan', anime2:'One Piece', hint:'Combattants à la lame les plus forts de leur équipe' },
+    // Deux figures paternelles brisées, force monstrueuse, portent le deuil de quelqu'un
+    { civilian:'Guts', undercover:'Thorfinn', anime1:'Berserk', anime2:'Vinland Saga', hint:'Guerriers nordiques/médiévaux consumés par la vengeance' },
+    // Deux antagonistes au sourire bienveillant qui cache l'horreur
+    { civilian:'Griffith', undercover:'Mahito', anime1:'Berserk', anime2:'Jujutsu Kaisen', hint:'Beaux visages qui dissimulent un vide total d\'humanité' },
+    // Deux filles magiques légères qui cachent une puissance catastrophique
+    { civilian:'Usagi Tsukino', undercover:'Nanoha Takamachi', anime1:'Sailor Moon', anime2:'Magical Girl Lyrical Nanoha', hint:'Magical girls au canon surpuissant et au cœur d\'or' },
   ]
 };
 
@@ -441,6 +508,8 @@ io.on('connection', (socket) => {
     }
 
     room.words[rk][name] = trimmed;
+    // Broadcast the word reveal to all players
+    io.to(code).emit('word:revealed', { player: name, word: trimmed, round: room.round });
     broadcastRoom(code);
 
     const alive = getAlive(room);

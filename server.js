@@ -193,7 +193,7 @@ function genCode() {
 }
 
 function sanitizeRoom(room) {
-  const r = { ...room, players: {}, spectators: room.spectators || [], turnOrder: room.turnOrder || [] };
+  const r = { ...room, players: {}, spectators: room.spectators || [], turnOrder: room.turnOrder || [], currentTurnIndex: room.currentTurnIndex ?? 0 };
   for (const [n, p] of Object.entries(room.players)) {
     r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready, voted: p.voted, isSpectator: p.isSpectator || false };
   }
@@ -231,20 +231,33 @@ function startTimer(code, seconds, phase) {
     const r = rooms[code];
     if (!r) return;
     if (phase === 'words') {
-      // Auto-submit empty for those who haven't
+      // Timer expired for current player — auto-submit '…' and advance turn
       const rk = `round${r.round}`;
       if (!r.words[rk]) r.words[rk] = {};
-      getAlive(r).forEach(n => { if (!r.words[rk][n]) r.words[rk][n] = '…'; });
-      io.to(code).emit('words:all_submitted', { round: r.round });
-
-      const votingLocked = r.round < (r.votingUnlockedAtRound || 2);
-      if (votingLocked) {
-        io.to(code).emit('toast', `Tour ${r.round} terminé — tour ${r.round + 1} !`);
-        setTimeout(() => nextRound(r, code), 1200);
+      const aliveTurnOrder = r.turnOrder.filter(n => !r.players[n]?.eliminated && r.players[n]?.connected);
+      const currentPlayer = aliveTurnOrder[r.currentTurnIndex % aliveTurnOrder.length];
+      if (currentPlayer && !r.words[rk][currentPlayer]) {
+        r.words[rk][currentPlayer] = '…';
+        io.to(code).emit('word:revealed', { player: currentPlayer, word: '…', round: r.round });
+      }
+      r.currentTurnIndex++;
+      const allDone = aliveTurnOrder.every(n => r.words[rk][n]);
+      if (allDone) {
+        const votingLocked = r.round < (r.votingUnlockedAtRound || 2);
+        if (votingLocked) {
+          io.to(code).emit('toast', `Tour ${r.round} terminé — tour ${r.round + 1} !`);
+          broadcastRoom(code);
+          setTimeout(() => nextRound(r, code), 1400);
+        } else {
+          r.subPhase = 'vote';
+          broadcastRoom(code);
+          startTimer(code, VOTE_TIMER_SECS, 'vote');
+        }
       } else {
-        r.subPhase = 'vote';
+        const nextPlayer = aliveTurnOrder[r.currentTurnIndex % aliveTurnOrder.length];
         broadcastRoom(code);
-        startTimer(code, VOTE_TIMER_SECS, 'vote');
+        io.to(code).emit('turn:next', { player: nextPlayer });
+        startTimer(code, WORD_TIMER_SECS, 'words');
       }
     } else if (phase === 'vote') {
       // Auto-eliminate highest voted or random alive
@@ -455,7 +468,8 @@ io.on('connection', (socket) => {
     room.wordPair = pair; room.assignments = assignments;
     room.phase = 'reveal'; room.round = 1; room.words = {}; room.votes = {}; room.accusations = {};
     room.subPhase = 'words'; room.mrWhiteGuessPhase = false;
-    room.turnOrder = shuffled; // random order locked at game start
+    room.turnOrder = shuffled; // random order locked at game start — only alive non-spectator players
+    room.currentTurnIndex = 0;  // whose turn it is within turnOrder
     room.votingUnlockedAtRound = 2; // vote only available from round 2
     Object.keys(room.players).forEach(p => { room.players[p].ready = room.players[p].isSpectator; room.players[p].voted = false; });
 
@@ -476,7 +490,10 @@ io.on('connection', (socket) => {
     if (connected.every(([,p]) => p.ready) && room.phase === 'reveal') {
       room.phase = 'playing';
       room.subPhase = 'words';
+      room.currentTurnIndex = 0;
       broadcastRoom(code);
+      const firstPlayer = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected)[0];
+      if (firstPlayer) io.to(code).emit('turn:next', { player: firstPlayer });
       if (room.settings.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
     }
   });
@@ -491,6 +508,14 @@ io.on('connection', (socket) => {
     if (!room.words[rk]) room.words[rk] = {};
     if (room.words[rk][name]) return; // already submitted
 
+    // Enforce turn order — only the current active player can submit
+    const aliveTurnOrder = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected);
+    const currentPlayer = aliveTurnOrder[room.currentTurnIndex % aliveTurnOrder.length];
+    if (name !== currentPlayer) {
+      socket.emit('error', `C'est le tour de ${currentPlayer} !`);
+      return;
+    }
+
     const trimmed = word.trim().substring(0, 40);
 
     // Check blocked words
@@ -500,34 +525,45 @@ io.on('connection', (socket) => {
     const isBlocked = blocked.some(b => wordLower.includes(b) || b.includes(wordLower));
 
     if (isBlocked) {
-      // Auto-eliminate for cheating!
       socket.emit('word:blocked', { word: trimmed });
       io.to(code).emit('toast', `🚫 ${name} a dit le nom du perso — éliminé !`);
+      // Advance turn before eliminating
+      room.currentTurnIndex++;
       eliminatePlayer(room, name, code);
       return;
     }
 
     room.words[rk][name] = trimmed;
-    // Broadcast the word reveal to all players
+    clearTimer(code); // clear per-player timer
+
+    // Broadcast the word to everyone
     io.to(code).emit('word:revealed', { player: name, word: trimmed, round: room.round });
-    broadcastRoom(code);
 
-    const alive = getAlive(room);
-    if (alive.length > 0 && alive.every(n => room.words[rk][n])) {
-      clearTimer(code);
-      io.to(code).emit('words:all_submitted', { round: room.round });
+    // Advance turn
+    room.currentTurnIndex++;
+    const newAliveTurnOrder = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected);
+    const allDone = newAliveTurnOrder.every(n => room.words[rk][n]);
 
-      // 2-round minimum: if we haven't reached votingUnlockedAtRound yet, go to next round
+    if (allDone) {
+      // Everyone has spoken this round
       const votingLocked = room.round < (room.votingUnlockedAtRound || 2);
       if (votingLocked) {
         io.to(code).emit('toast', `Tour ${room.round} terminé — tour ${room.round + 1} !`);
-        setTimeout(() => nextRound(room, code), 1200);
+        broadcastRoom(code);
+        setTimeout(() => nextRound(room, code), 1400);
       } else {
         room.subPhase = 'vote';
         Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
         broadcastRoom(code);
         if (room.settings.wordTimer) startTimer(code, VOTE_TIMER_SECS, 'vote');
       }
+    } else {
+      // Notify who is next
+      const nextPlayer = newAliveTurnOrder[room.currentTurnIndex % newAliveTurnOrder.length];
+      broadcastRoom(code);
+      io.to(code).emit('turn:next', { player: nextPlayer });
+      // Start per-player timer if enabled
+      if (room.settings.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
     }
   });
 
@@ -672,11 +708,16 @@ function eliminatePlayer(room, target, code) {
 function nextRound(room, code) {
   room.round++;
   room.subPhase = 'words';
+  room.currentTurnIndex = 0;
   const rk = `round${room.round}`;
   room.words[rk] = {};
   room.votes[rk] = {};
   Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
   broadcastRoom(code);
+  // Announce who goes first this round
+  const aliveTurnOrder = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected);
+  const firstPlayer = aliveTurnOrder[0];
+  if (firstPlayer) io.to(code).emit('turn:next', { player: firstPlayer });
   if (room.settings?.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
 }
 

@@ -126,9 +126,9 @@ function genCode() {
 }
 
 function sanitizeRoom(room) {
-  const r = { ...room, players: {} };
+  const r = { ...room, players: {}, spectators: room.spectators || [] };
   for (const [n, p] of Object.entries(room.players)) {
-    r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready, voted: p.voted };
+    r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready, voted: p.voted, isSpectator: p.isSpectator || false };
   }
   return r;
 }
@@ -208,9 +208,10 @@ async function fetchCharImage(charName, animeName) {
 }
 
 // ═══════════════════════════════
-//  HEALTH
+//  HEALTH + PING (anti-sleep)
 // ═══════════════════════════════
 app.get('/', (_, res) => res.send('Undercover Anime Backend OK ✅'));
+app.get('/ping', (_, res) => res.json({ ok: true, ts: Date.now() }));
 
 // ═══════════════════════════════
 //  SOCKET
@@ -223,29 +224,41 @@ io.on('connection', (socket) => {
       code, genre, host: name,
       phase: 'lobby',
       settings: { mrWhite: !!mrWhite, doubleUndercover: !!doubleUndercover, wordTimer: wordTimer !== false },
-      players: { [name]: { socketId: socket.id, connected: true, eliminated: false, ready: false, voted: false } },
+      players: { [name]: { socketId: socket.id, connected: true, eliminated: false, ready: false, voted: false, isSpectator: false } },
+      spectators: [],
       assignments: {}, wordPair: null,
-      round: 1, words: {}, votes: {},
+      round: 1, words: {}, votes: {}, accusations: {},
       subPhase: 'words',
       mrWhiteGuessPhase: false,
-      scores: {},  // { playerName: { wins: 0, eliminations: 0 } }
+      scores: {},
       timerEnd: null, timerPhase: null,
+      countdown: null,
     };
-    socket.join(code); socket.data = { name, code };
+    socket.join(code); socket.data = { name, code, isSpectator: false };
     socket.emit('room:joined', { code, name, isHost: true });
     broadcastRoom(code);
   });
 
-  socket.on('room:join', ({ name, code }) => {
+  socket.on('room:join', ({ name, code, asSpectator }) => {
     const room = rooms[code];
     if (!room) return socket.emit('error', 'Salle introuvable !');
-    if (room.phase !== 'lobby') return socket.emit('error', 'Partie déjà en cours !');
     if (room.players[name]?.connected) return socket.emit('error', 'Ce prénom est déjà pris !');
-    room.players[name] = { socketId: socket.id, connected: true, eliminated: false, ready: false, voted: false };
-    socket.join(code); socket.data = { name, code };
-    socket.emit('room:joined', { code, name, isHost: room.host === name });
+
+    // Join mid-game as spectator
+    if (room.phase !== 'lobby' && !asSpectator) {
+      // Offer spectator mode
+      return socket.emit('spectator:offer', { code, name });
+    }
+
+    const isSpectator = asSpectator || room.phase !== 'lobby';
+    room.players[name] = { socketId: socket.id, connected: true, eliminated: isSpectator, ready: isSpectator, voted: false, isSpectator };
+    if (isSpectator && !room.spectators) room.spectators = [];
+    if (isSpectator) room.spectators.push(name);
+    socket.join(code); socket.data = { name, code, isSpectator };
+    socket.emit('room:joined', { code, name, isHost: false, isSpectator });
+    if (isSpectator) socket.emit('spectator:joined', { message: 'Tu observes la partie en cours !' });
     broadcastRoom(code);
-    io.to(code).emit('toast', `${name} a rejoint !`);
+    io.to(code).emit('toast', isSpectator ? `👁 ${name} observe la partie` : `${name} a rejoint !`);
   });
 
   socket.on('disconnect', () => {
@@ -267,9 +280,13 @@ io.on('connection', (socket) => {
     if (!room || !room.players[name]) return socket.emit('error', 'Session introuvable');
     room.players[name].socketId = socket.id;
     room.players[name].connected = true;
-    socket.join(code); socket.data = { name, code };
-    socket.emit('room:joined', { code, name, isHost: room.host === name });
+    socket.join(code); socket.data = { name, code, isSpectator: room.players[name].isSpectator };
+    socket.emit('room:joined', { code, name, isHost: room.host === name, isSpectator: room.players[name].isSpectator });
     if (room.assignments?.[name]) socket.emit('your:assignment', room.assignments[name]);
+    // Restore vote state
+    const rk = `round${room.round}`;
+    const myVote = room.votes?.[rk]?.[name];
+    if (myVote) socket.emit('vote:restore', { target: myVote });
     broadcastRoom(code);
     io.to(code).emit('toast', `${name} est de retour !`);
   });
@@ -299,11 +316,33 @@ io.on('connection', (socket) => {
     io.to(code).emit('toast', `${name} a quitté`);
   });
 
-  // ── START GAME ──
+  // ── ACCUSATION ──
+  socket.on('player:accuse', ({ target }) => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.phase !== 'playing') return;
+    if (room.players[name]?.eliminated) return;
+    const rk = `round${room.round}`;
+    if (!room.accusations[rk]) room.accusations[rk] = {};
+    room.accusations[rk][name] = target;
+    io.to(code).emit('player:accused', { accuser: name, target });
+    broadcastRoom(code);
+  });
+
+  // ── START GAME (with countdown) ──
   socket.on('game:start', async ({ genre, settings }) => {
     const { name, code } = socket.data || {};
     const room = rooms[code];
     if (!room || room.host !== name) return;
+
+    // Countdown 3-2-1
+    io.to(code).emit('game:countdown', 3);
+    await new Promise(r => setTimeout(r, 1000));
+    io.to(code).emit('game:countdown', 2);
+    await new Promise(r => setTimeout(r, 1000));
+    io.to(code).emit('game:countdown', 1);
+    await new Promise(r => setTimeout(r, 1000));
+    io.to(code).emit('game:countdown', 0);
 
     io.to(code).emit('loading', true);
 
@@ -319,51 +358,32 @@ io.on('connection', (socket) => {
     pair.civilianImg = img1;
     pair.undercoverImg = img2;
 
-    const players = Object.keys(room.players).filter(p => room.players[p].connected);
+    const players = Object.keys(room.players).filter(p => room.players[p].connected && !room.players[p].isSpectator);
     const shuffled = [...players].sort(() => Math.random() - .5);
 
-    // Role assignment
     const assignments = {};
     let ucCount = (s.doubleUndercover && players.length >= 6) ? 2 : 1;
     let mrwSet = false;
 
     shuffled.forEach((p, i) => {
       if (i < ucCount) {
-        assignments[p] = {
-          role: 'undercover',
-          word: pair.undercover,
-          image: pair.undercoverImg,
-          blockedWords: getBlockedWords(pair.undercover),
-        };
+        assignments[p] = { role:'undercover', word:pair.undercover, image:pair.undercoverImg, blockedWords:getBlockedWords(pair.undercover) };
       } else if (!mrwSet && s.mrWhite && players.length >= 5) {
         mrwSet = true;
-        assignments[p] = { role: 'mr-white', word: null, image: null, blockedWords: [] };
+        assignments[p] = { role:'mr-white', word:null, image:null, blockedWords:[] };
       } else {
-        assignments[p] = {
-          role: 'civilian',
-          word: pair.civilian,
-          image: pair.civilianImg,
-          blockedWords: getBlockedWords(pair.civilian),
-        };
+        assignments[p] = { role:'civilian', word:pair.civilian, image:pair.civilianImg, blockedWords:getBlockedWords(pair.civilian) };
       }
     });
 
-    // Init scores
     players.forEach(p => { if (!room.scores[p]) room.scores[p] = { wins: 0 }; });
 
-    room.wordPair = pair;
-    room.assignments = assignments;
-    room.phase = 'reveal';
-    room.round = 1;
-    room.words = {};
-    room.votes = {};
-    room.subPhase = 'words';
-    room.mrWhiteGuessPhase = false;
-    Object.keys(room.players).forEach(p => { room.players[p].ready = false; room.players[p].voted = false; });
+    room.wordPair = pair; room.assignments = assignments;
+    room.phase = 'reveal'; room.round = 1; room.words = {}; room.votes = {}; room.accusations = {};
+    room.subPhase = 'words'; room.mrWhiteGuessPhase = false;
+    Object.keys(room.players).forEach(p => { room.players[p].ready = room.players[p].isSpectator; room.players[p].voted = false; });
 
-    shuffled.forEach(pName => {
-      findSocket(pName, code)?.emit('your:assignment', assignments[pName]);
-    });
+    shuffled.forEach(pName => { findSocket(pName, code)?.emit('your:assignment', assignments[pName]); });
 
     io.to(code).emit('loading', false);
     broadcastRoom(code);
@@ -485,11 +505,15 @@ io.on('connection', (socket) => {
     if (!room || room.host !== name) return;
     clearTimer(code);
     room.phase = 'lobby'; room.assignments = {}; room.wordPair = null;
-    room.words = {}; room.votes = {}; room.round = 1; room.mrWhiteGuessPhase = false; room.subPhase = 'words';
+    room.words = {}; room.votes = {}; room.accusations = {}; room.round = 1;
+    room.mrWhiteGuessPhase = false; room.subPhase = 'words';
     room.timerEnd = null; room.timerPhase = null;
+    // Remove spectators from players, keep real players
     Object.keys(room.players).forEach(p => {
-      room.players[p].ready = false; room.players[p].eliminated = false; room.players[p].voted = false;
+      if (room.players[p].isSpectator) { delete room.players[p]; }
+      else { room.players[p].ready = false; room.players[p].eliminated = false; room.players[p].voted = false; }
     });
+    room.spectators = [];
     broadcastRoom(code);
   });
 

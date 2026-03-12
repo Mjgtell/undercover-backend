@@ -7,15 +7,12 @@ const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args
 const app = express();
 app.use(cors());
 app.use(express.json());
-
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] }
-});
+const io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] } });
 
-// ═══════════════════════════════════════
-//  80+ ANIME PAIRS
-// ═══════════════════════════════════════
+// ═══════════════════════════════
+//  PAIRS DATABASE
+// ═══════════════════════════════
 const PAIRS = {
   shonen: [
     { civilian:'Naruto Uzumaki', undercover:'Izuku Midoriya', anime1:'Naruto', anime2:'My Hero Academia', hint:'Héros déterminés partis de rien' },
@@ -33,6 +30,8 @@ const PAIRS = {
     { civilian:'Natsu Dragneel', undercover:'Ace Portgas', anime1:'Fairy Tail', anime2:'One Piece', hint:'Utilisateurs de feu aux cheveux flashy' },
     { civilian:'Gon Freecss', undercover:'Meruem', anime1:'Hunter x Hunter', anime2:'Hunter x Hunter', hint:'Êtres purs aux capacités hors normes' },
     { civilian:'Ryomen Sukuna', undercover:'Muzan Kibutsuji', anime1:'Jujutsu Kaisen', anime2:'Demon Slayer', hint:'Grands antagonistes quasi-immortels' },
+    { civilian:'Gojo Satoru', undercover:'Kakashi Hatake', anime1:'Jujutsu Kaisen', anime2:'Naruto', hint:'Sensei masqués les plus puissants de leur univers' },
+    { civilian:'Shanks', undercover:'Whitebeard', anime1:'One Piece', anime2:'One Piece', hint:'Empereurs de la mer au charisme légendaire' },
   ],
   fantasy: [
     { civilian:'Kirito', undercover:'Bell Cranel', anime1:'Sword Art Online', anime2:'DanMachi', hint:'Épéistes solitaires dans un monde de jeu' },
@@ -67,7 +66,7 @@ const PAIRS = {
     { civilian:'Miyamura Izumi', undercover:'Handa Sei', anime1:'Horimiya', anime2:'Barakamon', hint:'Introvertis qui s\'épanouissent' },
     { civilian:'Shouko Nishimiya', undercover:'Mei Tachibana', anime1:'A Silent Voice', anime2:'Say I Love You', hint:'Filles discrètes qui apprennent à faire confiance' },
     { civilian:'Shoya Ishida', undercover:'Takeo Goda', anime1:'A Silent Voice', anime2:'My Love Story', hint:'Garçons maladroits qui se rachètent par amour' },
-    { civilian:'Kaori Miyazono', undercover:'Anohana Menma', anime1:'Your Lie in April', anime2:'AnoHana', hint:'Filles lumineuses au destin tragique' },
+    { civilian:'Kaori Miyazono', undercover:'Menma', anime1:'Your Lie in April', anime2:'AnoHana', hint:'Filles lumineuses au destin tragique' },
     { civilian:'Kyo Sohma', undercover:'Yato', anime1:'Fruits Basket', anime2:'Noragami', hint:'Garçons brusques avec un secret douloureux' },
   ],
   sports: [
@@ -80,7 +79,7 @@ const PAIRS = {
     { civilian:'Tsubasa Ozora', undercover:'Kojiro Hyuga', anime1:'Captain Tsubasa', anime2:'Captain Tsubasa', hint:'Attaquants de foot au shoot surpuissant' },
     { civilian:'Yuri Katsuki', undercover:'Victor Nikiforov', anime1:'Yuri on Ice', anime2:'Yuri on Ice', hint:'Patineurs d\'élite au style élégant' },
     { civilian:'Seishiro Nagi', undercover:'Reo Mikage', anime1:'Blue Lock', anime2:'Blue Lock', hint:'Duo de Blue Lock aux styles opposés' },
-    { civilian:'Haruichi Kominato', undercover:'Eijun Sawamura', anime1:'Diamond no Ace', anime2:'Diamond no Ace', hint:'Coéquipiers de baseball aux styles contrastés' },
+    { civilian:'Eijun Sawamura', undercover:'Haruichi Kominato', anime1:'Diamond no Ace', anime2:'Diamond no Ace', hint:'Coéquipiers de baseball aux styles contrastés' },
   ],
   mix: [
     { civilian:'L Lawliet', undercover:'Lelouch vi Britannia', anime1:'Death Note', anime2:'Code Geass', hint:'Géniaux stratèges qui manipulent les autres' },
@@ -101,15 +100,25 @@ const PAIRS = {
   ]
 };
 
-function getRandomPair(genre) {
-  const list = PAIRS[genre] || PAIRS.mix;
-  return list[Math.floor(Math.random() * list.length)];
+// Generate blocked words from character name (normalized tokens)
+function getBlockedWords(name) {
+  if (!name) return [];
+  return name.toLowerCase()
+    .replace(/[^a-zàâäéèêëîïôùûü\s]/gi, '')
+    .split(/\s+/)
+    .filter(w => w.length > 2);
 }
 
-// ═══════════════════════════════════════
+function getRandomPair(genre) {
+  const list = PAIRS[genre] || PAIRS.mix;
+  return { ...list[Math.floor(Math.random() * list.length)] };
+}
+
+// ═══════════════════════════════
 //  ROOMS
-// ═══════════════════════════════════════
+// ═══════════════════════════════
 const rooms = {};
+const timers = {}; // code -> setInterval ref
 
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -119,7 +128,7 @@ function genCode() {
 function sanitizeRoom(room) {
   const r = { ...room, players: {} };
   for (const [n, p] of Object.entries(room.players)) {
-    r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready };
+    r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready, voted: p.voted };
   }
   return r;
 }
@@ -137,9 +146,51 @@ function findSocket(name, code) {
   return [...io.sockets.sockets.values()].find(s => s.data?.name === name && s.data?.code === code);
 }
 
-// ═══════════════════════════════════════
-//  JIKAN IMAGE FETCH
-// ═══════════════════════════════════════
+// ═══════════════════════════════
+//  TIMER
+// ═══════════════════════════════
+const WORD_TIMER_SECS = 45;
+const VOTE_TIMER_SECS = 60;
+
+function startTimer(code, seconds, phase) {
+  clearTimer(code);
+  const room = rooms[code];
+  if (!room) return;
+  room.timerEnd = Date.now() + seconds * 1000;
+  room.timerPhase = phase;
+  broadcastRoom(code);
+
+  timers[code] = setTimeout(() => {
+    const r = rooms[code];
+    if (!r) return;
+    if (phase === 'words') {
+      // Auto-submit empty for those who haven't
+      const rk = `round${r.round}`;
+      if (!r.words[rk]) r.words[rk] = {};
+      getAlive(r).forEach(n => { if (!r.words[rk][n]) r.words[rk][n] = '…'; });
+      io.to(code).emit('words:all_submitted', { round: r.round, words: r.words[rk] });
+      r.subPhase = 'vote';
+      broadcastRoom(code);
+      startTimer(code, VOTE_TIMER_SECS, 'vote');
+    } else if (phase === 'vote') {
+      // Auto-eliminate highest voted or random alive
+      const alive = getAlive(r);
+      const voteCount = {};
+      alive.forEach(n => { voteCount[n] = 0; });
+      Object.values(r.votes?.[`round${r.round}`] || {}).forEach(t => { if (voteCount[t] !== undefined) voteCount[t]++; });
+      const sorted = alive.sort((a, b) => (voteCount[b]||0) - (voteCount[a]||0));
+      if (sorted[0]) eliminatePlayer(r, sorted[0], code);
+    }
+  }, seconds * 1000);
+}
+
+function clearTimer(code) {
+  if (timers[code]) { clearTimeout(timers[code]); delete timers[code]; }
+}
+
+// ═══════════════════════════════
+//  JIKAN
+// ═══════════════════════════════
 async function fetchCharImage(charName, animeName) {
   try {
     const q = encodeURIComponent(charName);
@@ -156,21 +207,30 @@ async function fetchCharImage(charName, animeName) {
   } catch { return null; }
 }
 
-// ═══════════════════════════════════════
+// ═══════════════════════════════
 //  HEALTH
-// ═══════════════════════════════════════
+// ═══════════════════════════════
 app.get('/', (_, res) => res.send('Undercover Anime Backend OK ✅'));
 
-// ═══════════════════════════════════════
-//  SOCKET EVENTS
-// ═══════════════════════════════════════
+// ═══════════════════════════════
+//  SOCKET
+// ═══════════════════════════════
 io.on('connection', (socket) => {
 
-  socket.on('room:create', ({ name, genre, mrWhite }) => {
+  socket.on('room:create', ({ name, genre, mrWhite, doubleUndercover, wordTimer }) => {
     let code; do { code = genCode(); } while (rooms[code]);
-    rooms[code] = { code, genre, mrWhite, host: name, phase: 'lobby',
-      players: { [name]: { socketId: socket.id, connected: true, eliminated: false, ready: false } },
-      assignments: {}, wordPair: null, round: 1, words: {}, mrWhiteGuessPhase: false };
+    rooms[code] = {
+      code, genre, host: name,
+      phase: 'lobby',
+      settings: { mrWhite: !!mrWhite, doubleUndercover: !!doubleUndercover, wordTimer: wordTimer !== false },
+      players: { [name]: { socketId: socket.id, connected: true, eliminated: false, ready: false, voted: false } },
+      assignments: {}, wordPair: null,
+      round: 1, words: {}, votes: {},
+      subPhase: 'words',
+      mrWhiteGuessPhase: false,
+      scores: {},  // { playerName: { wins: 0, eliminations: 0 } }
+      timerEnd: null, timerPhase: null,
+    };
     socket.join(code); socket.data = { name, code };
     socket.emit('room:joined', { code, name, isHost: true });
     broadcastRoom(code);
@@ -181,7 +241,7 @@ io.on('connection', (socket) => {
     if (!room) return socket.emit('error', 'Salle introuvable !');
     if (room.phase !== 'lobby') return socket.emit('error', 'Partie déjà en cours !');
     if (room.players[name]?.connected) return socket.emit('error', 'Ce prénom est déjà pris !');
-    room.players[name] = { socketId: socket.id, connected: true, eliminated: false, ready: false };
+    room.players[name] = { socketId: socket.id, connected: true, eliminated: false, ready: false, voted: false };
     socket.join(code); socket.data = { name, code };
     socket.emit('room:joined', { code, name, isHost: room.host === name });
     broadcastRoom(code);
@@ -195,8 +255,8 @@ io.on('connection', (socket) => {
     if (room.players[name]) room.players[name].connected = false;
     if (room.host === name && room.phase === 'lobby') {
       const other = Object.entries(room.players).find(([n,p]) => n !== name && p.connected);
-      if (other) { room.host = other[0]; const s = findSocket(other[0], code); if (s) s.emit('room:promoted', { isHost: true }); }
-      else { delete rooms[code]; return; }
+      if (other) { room.host = other[0]; findSocket(other[0], code)?.emit('room:promoted', { isHost: true }); }
+      else { clearTimer(code); delete rooms[code]; return; }
     }
     broadcastRoom(code);
     io.to(code).emit('toast', `${name} s'est déconnecté`);
@@ -211,7 +271,7 @@ io.on('connection', (socket) => {
     socket.emit('room:joined', { code, name, isHost: room.host === name });
     if (room.assignments?.[name]) socket.emit('your:assignment', room.assignments[name]);
     broadcastRoom(code);
-    io.to(code).emit('toast', `${name} s'est reconnecté !`);
+    io.to(code).emit('toast', `${name} est de retour !`);
   });
 
   socket.on('player:kick', ({ target }) => {
@@ -230,25 +290,28 @@ io.on('connection', (socket) => {
     if (!name || !code || !rooms[code]) return;
     const room = rooms[code];
     delete room.players[name]; socket.leave(code); socket.data = {};
-    if (Object.keys(room.players).length === 0) { delete rooms[code]; return; }
+    if (Object.keys(room.players).length === 0) { clearTimer(code); delete rooms[code]; return; }
     if (room.host === name) {
       const next = Object.entries(room.players).find(([,p]) => p.connected);
-      if (next) { room.host = next[0]; const s = findSocket(next[0], code); if (s) s.emit('room:promoted', { isHost: true }); }
+      if (next) { room.host = next[0]; findSocket(next[0], code)?.emit('room:promoted', { isHost: true }); }
     }
     broadcastRoom(code);
     io.to(code).emit('toast', `${name} a quitté`);
   });
 
-  socket.on('game:start', async ({ genre, mrWhite }) => {
+  // ── START GAME ──
+  socket.on('game:start', async ({ genre, settings }) => {
     const { name, code } = socket.data || {};
     const room = rooms[code];
     if (!room || room.host !== name) return;
 
-    io.to(code).emit('toast', '🎲 Génération de la partie…');
+    io.to(code).emit('loading', true);
 
-    const pair = getRandomPair(genre || room.genre);
+    const g = genre || room.genre;
+    const s = settings || room.settings;
+    room.settings = s;
 
-    // Fetch images in parallel
+    const pair = getRandomPair(g);
     const [img1, img2] = await Promise.all([
       fetchCharImage(pair.civilian, pair.anime1),
       fetchCharImage(pair.undercover, pair.anime2),
@@ -257,26 +320,56 @@ io.on('connection', (socket) => {
     pair.undercoverImg = img2;
 
     const players = Object.keys(room.players).filter(p => room.players[p].connected);
-    const mrwEnabled = (mrWhite !== undefined ? mrWhite : room.mrWhite) && players.length >= 5;
     const shuffled = [...players].sort(() => Math.random() - .5);
+
+    // Role assignment
     const assignments = {};
+    let ucCount = (s.doubleUndercover && players.length >= 6) ? 2 : 1;
+    let mrwSet = false;
+
     shuffled.forEach((p, i) => {
-      if (i === 0) assignments[p] = { role:'undercover', word:pair.undercover, image:pair.undercoverImg };
-      else if (i === 1 && mrwEnabled) assignments[p] = { role:'mr-white', word:null, image:null };
-      else assignments[p] = { role:'civilian', word:pair.civilian, image:pair.civilianImg };
+      if (i < ucCount) {
+        assignments[p] = {
+          role: 'undercover',
+          word: pair.undercover,
+          image: pair.undercoverImg,
+          blockedWords: getBlockedWords(pair.undercover),
+        };
+      } else if (!mrwSet && s.mrWhite && players.length >= 5) {
+        mrwSet = true;
+        assignments[p] = { role: 'mr-white', word: null, image: null, blockedWords: [] };
+      } else {
+        assignments[p] = {
+          role: 'civilian',
+          word: pair.civilian,
+          image: pair.civilianImg,
+          blockedWords: getBlockedWords(pair.civilian),
+        };
+      }
     });
 
-    room.wordPair = pair; room.assignments = assignments;
-    room.phase = 'reveal'; room.round = 1; room.words = {}; room.mrWhiteGuessPhase = false;
-    Object.keys(room.players).forEach(p => { room.players[p].ready = false; });
+    // Init scores
+    players.forEach(p => { if (!room.scores[p]) room.scores[p] = { wins: 0 }; });
+
+    room.wordPair = pair;
+    room.assignments = assignments;
+    room.phase = 'reveal';
+    room.round = 1;
+    room.words = {};
+    room.votes = {};
+    room.subPhase = 'words';
+    room.mrWhiteGuessPhase = false;
+    Object.keys(room.players).forEach(p => { room.players[p].ready = false; room.players[p].voted = false; });
 
     shuffled.forEach(pName => {
-      const ps = findSocket(pName, code);
-      if (ps) ps.emit('your:assignment', assignments[pName]);
+      findSocket(pName, code)?.emit('your:assignment', assignments[pName]);
     });
+
+    io.to(code).emit('loading', false);
     broadcastRoom(code);
   });
 
+  // ── PLAYER READY ──
   socket.on('player:ready', () => {
     const { name, code } = socket.data || {};
     const room = rooms[code];
@@ -285,31 +378,97 @@ io.on('connection', (socket) => {
     broadcastRoom(code);
     const connected = Object.entries(room.players).filter(([,p]) => p.connected && !p.eliminated);
     if (connected.every(([,p]) => p.ready) && room.phase === 'reveal') {
-      room.phase = 'playing'; broadcastRoom(code);
+      room.phase = 'playing';
+      room.subPhase = 'words';
+      broadcastRoom(code);
+      if (room.settings.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
     }
   });
 
+  // ── SUBMIT WORD ──
   socket.on('word:submit', ({ word }) => {
     const { name, code } = socket.data || {};
     const room = rooms[code];
-    if (!room || room.phase !== 'playing') return;
+    if (!room || room.phase !== 'playing' || room.subPhase !== 'words') return;
+
     const rk = `round${room.round}`;
     if (!room.words[rk]) room.words[rk] = {};
-    room.words[rk][name] = word.trim().substring(0, 40);
+    if (room.words[rk][name]) return; // already submitted
+
+    const trimmed = word.trim().substring(0, 40);
+
+    // Check blocked words
+    const myAssignment = room.assignments[name];
+    const blocked = myAssignment?.blockedWords || [];
+    const wordLower = trimmed.toLowerCase().replace(/[^a-zàâäéèêëîïôùûü]/gi, '');
+    const isBlocked = blocked.some(b => wordLower.includes(b) || b.includes(wordLower));
+
+    if (isBlocked) {
+      // Auto-eliminate for cheating!
+      socket.emit('word:blocked', { word: trimmed });
+      io.to(code).emit('toast', `🚫 ${name} a dit le nom du perso — éliminé !`);
+      eliminatePlayer(room, name, code);
+      return;
+    }
+
+    room.words[rk][name] = trimmed;
     broadcastRoom(code);
+
     const alive = getAlive(room);
     if (alive.length > 0 && alive.every(n => room.words[rk][n])) {
-      io.to(code).emit('words:all_submitted', { round: room.round, words: room.words[rk] });
+      clearTimer(code);
+      io.to(code).emit('words:all_submitted', { round: room.round });
+      room.subPhase = 'vote';
+      Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
+      broadcastRoom(code);
+      if (room.settings.wordTimer) startTimer(code, VOTE_TIMER_SECS, 'vote');
     }
   });
 
-  socket.on('vote:eliminate', ({ target }) => {
+  // ── CAST VOTE ──
+  socket.on('vote:cast', ({ target }) => {
     const { name, code } = socket.data || {};
     const room = rooms[code];
-    if (!room || room.host !== name || room.phase !== 'playing') return;
+    if (!room || room.phase !== 'playing' || room.subPhase !== 'vote') return;
+    if (room.players[name]?.eliminated) return;
+
+    const rk = `round${room.round}`;
+    if (!room.votes[rk]) room.votes[rk] = {};
+    room.votes[rk][name] = target;
+    room.players[name].voted = true;
+    broadcastRoom(code);
+
+    // Check majority
+    const alive = getAlive(room);
+    const submitted = Object.keys(room.votes[rk] || {});
+    if (alive.every(n => submitted.includes(n))) {
+      clearTimer(code);
+      // Tally votes
+      const tally = {};
+      alive.forEach(n => { tally[n] = 0; });
+      Object.values(room.votes[rk]).forEach(t => { if (tally[t] !== undefined) tally[t]++; });
+      const maxVotes = Math.max(...Object.values(tally));
+      const tied = alive.filter(n => tally[n] === maxVotes);
+
+      if (tied.length === 1) {
+        eliminatePlayer(room, tied[0], code);
+      } else {
+        // Tie — broadcast and let host decide
+        io.to(code).emit('vote:tie', { tied, tally });
+        broadcastRoom(code);
+      }
+    }
+  });
+
+  // ── HOST BREAKS TIE ──
+  socket.on('vote:tiebreak', ({ target }) => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name) return;
     eliminatePlayer(room, target, code);
   });
 
+  // ── MR WHITE GUESS ──
   socket.on('mrwhite:guess', ({ guess }) => {
     const { name, code } = socket.data || {};
     const room = rooms[code];
@@ -319,60 +478,119 @@ io.on('connection', (socket) => {
     endGame(room, code, isCorrect ? 'mrwhite-wins' : 'civilians-win');
   });
 
+  // ── RESET ──
   socket.on('game:reset', () => {
     const { name, code } = socket.data || {};
     const room = rooms[code];
     if (!room || room.host !== name) return;
+    clearTimer(code);
     room.phase = 'lobby'; room.assignments = {}; room.wordPair = null;
-    room.words = {}; room.round = 1; room.mrWhiteGuessPhase = false;
-    Object.keys(room.players).forEach(p => { room.players[p].ready = false; room.players[p].eliminated = false; });
+    room.words = {}; room.votes = {}; room.round = 1; room.mrWhiteGuessPhase = false; room.subPhase = 'words';
+    room.timerEnd = null; room.timerPhase = null;
+    Object.keys(room.players).forEach(p => {
+      room.players[p].ready = false; room.players[p].eliminated = false; room.players[p].voted = false;
+    });
+    broadcastRoom(code);
+  });
+
+  // ── UPDATE SETTINGS (host only) ──
+  socket.on('settings:update', (settings) => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name) return;
+    room.settings = { ...room.settings, ...settings };
     broadcastRoom(code);
   });
 
 });
 
-// ═══════════════════════════════════════
+// ═══════════════════════════════
 //  GAME LOGIC
-// ═══════════════════════════════════════
+// ═══════════════════════════════
 function eliminatePlayer(room, target, code) {
+  if (!room.players[target]) return;
   room.players[target].eliminated = true;
   const role = room.assignments[target]?.role;
-  io.to(code).emit('toast', `💀 ${target} est éliminé !`);
+
+  // Emit elimination event WITH role (for animation) but only AFTER a short delay so it's dramatic
+  io.to(code).emit('player:eliminated', { name: target, role });
 
   const alive = getAlive(room);
   const aliveRoles = alive.map(n => room.assignments[n]?.role);
-  const undercoverAlive = aliveRoles.includes('undercover');
+  const undercoverCount = aliveRoles.filter(r => r === 'undercover').length;
   const mrWhiteAlive = aliveRoles.includes('mr-white');
   const civilianCount = aliveRoles.filter(r => r === 'civilian').length;
 
+  clearTimer(code);
+
   if (role === 'undercover') {
-    if (mrWhiteAlive) {
+    if (undercoverCount > 0) {
+      // Still undercouvers alive
+      nextRound(room, code);
+    } else if (mrWhiteAlive) {
       room.mrWhiteGuessPhase = true;
       broadcastRoom(code);
       const mrwName = Object.entries(room.assignments).find(([,a]) => a.role === 'mr-white')?.[0];
-      const mrwSocket = mrwName ? findSocket(mrwName, code) : null;
-      if (mrwSocket) mrwSocket.emit('mrwhite:your_turn');
-    } else { endGame(room, code, 'civilians-win'); }
+      findSocket(mrwName, code)?.emit('mrwhite:your_turn');
+    } else {
+      endGame(room, code, 'civilians-win');
+    }
   } else if (role === 'mr-white') {
-    if (undercoverAlive) {
-      room.round++; broadcastRoom(code);
-      io.to(code).emit('toast', `${target} était Mr. White ! Continuez…`);
-    } else { endGame(room, code, 'civilians-win'); }
+    if (undercoverCount > 0) { nextRound(room, code); }
+    else { endGame(room, code, 'civilians-win'); }
   } else {
-    if (!undercoverAlive && !mrWhiteAlive) { endGame(room, code, 'civilians-win'); }
-    else if (civilianCount <= 1 && undercoverAlive) { endGame(room, code, 'undercover-wins'); }
-    else if (civilianCount <= 1 && mrWhiteAlive) { endGame(room, code, 'mrwhite-wins'); }
-    else {
-      room.round++; broadcastRoom(code);
-      io.to(code).emit('toast', `${target} était Civil. Tour suivant !`);
+    // Civilian eliminated
+    if (undercoverCount === 0 && !mrWhiteAlive) { endGame(room, code, 'civilians-win'); }
+    else if (civilianCount <= undercoverCount) {
+      endGame(room, code, undercoverCount > 0 ? 'undercover-wins' : 'mrwhite-wins');
+    } else {
+      nextRound(room, code);
     }
   }
 }
 
+function nextRound(room, code) {
+  room.round++;
+  room.subPhase = 'words';
+  const rk = `round${room.round}`;
+  room.words[rk] = {};
+  room.votes[rk] = {};
+  Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
+  broadcastRoom(code);
+  if (room.settings?.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
+}
+
 function endGame(room, code, outcome) {
-  room.phase = 'result'; room.result = { outcome };
+  room.phase = 'result';
+  room.result = { outcome };
+
+  // Update scores
+  const asgn = room.assignments || {};
+  if (outcome === 'civilians-win') {
+    Object.entries(asgn).forEach(([n, a]) => {
+      if (a.role === 'civilian' && room.players[n] && !room.players[n].eliminated) {
+        if (!room.scores[n]) room.scores[n] = { wins: 0 };
+        room.scores[n].wins++;
+      }
+    });
+  } else if (outcome === 'undercover-wins') {
+    Object.entries(asgn).forEach(([n, a]) => {
+      if (a.role === 'undercover') {
+        if (!room.scores[n]) room.scores[n] = { wins: 0 };
+        room.scores[n].wins++;
+      }
+    });
+  } else if (outcome === 'mrwhite-wins') {
+    Object.entries(asgn).forEach(([n, a]) => {
+      if (a.role === 'mr-white') {
+        if (!room.scores[n]) room.scores[n] = { wins: 0 };
+        room.scores[n].wins++;
+      }
+    });
+  }
+
   broadcastRoom(code);
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`✅ Server on port ${PORT}`));
+server.listen(PORT, () => console.log(`✅ Undercover Anime backend on port ${PORT}`));

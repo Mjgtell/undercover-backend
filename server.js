@@ -8,30 +8,31 @@ const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args
 //  BOT ENGINE
 // ═══════════════════════════════
 
-const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
+const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
 const BOT_NAMES = ['Kaito','Yuki','Ryu','Hana','Sora','Nami','Ren','Aoi'];
 const BOT_THINK_DELAY = 2800; // ms before bot "responds" — feels human
 
 async function callClaude(systemPrompt, userPrompt) {
   try {
-    const res = await fetch(ANTHROPIC_API, {
+    const res = await fetch(GROQ_API, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY || ''}`,
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'llama-3.1-8b-instant',
         max_tokens: 60,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
       }),
     });
     const data = await res.json();
-    return data.content?.[0]?.text?.trim() || null;
+    return data.choices?.[0]?.message?.content?.trim() || null;
   } catch (e) {
-    console.error('Claude API error:', e.message);
+    console.error('Groq API error:', e.message);
     return null;
   }
 }

@@ -68,22 +68,22 @@ async function botSubmitWord(room, code, botName) {
     if (prev) history += `Tour ${r} — ${prev}\n`;
   }
 
-  const system = `Tu joues à Undercover, un jeu de déduction.
-Ton personnage secret est : ${character}
-Tu dois donner UN SEUL MOT qui décrit subtilement ton personnage.
+  const roundNum = room.round;
+  const system = `You are playing Undercover, a deduction game. Reply in French only.
+Your secret character is: ${character}
+Give ONE single French word that hints at your character without being too obvious.
 
-RÈGLE ABSOLUE : ne jamais dire le nom ou partie du nom du personnage.
+STRICT RULES:
+- Never say the character's name or any part of it
+- ONE word only, no explanation, no punctuation
+- Round 1-2: use a VAGUE word that fits many anime characters (examples: "déterminé", "sombre", "puissant", "rapide", "loyal", "froid", "rage", "honneur"). Stay safe, don't reveal yourself.
+- Round 3+: you can be slightly more specific but stay cautious
+- Pick a word that matches YOUR character but could also fit others`;
 
-STRATÉGIE (très important) :
-- Tour 1-2 : donne un mot VAGUE et universel qui pourrait s'appliquer à beaucoup de personnages. Exemples : "combat", "force", "mystère", "regard", "silence". Évite les mots trop précis qui te grillent.
-- Tour 3+ : tu peux être légèrement plus précis mais reste prudent.
-- Observe les mots des autres pour rester cohérent sans te démarquer.
-- UN SEUL MOT. Pas de phrase. Pas d'explication.`;
-
-  const user = `Tour ${room.round}.
-${otherWords ? `Mots déjà dits ce tour :\n${otherWords}\n` : 'Tu es le premier à parler ce tour.'}
-${history ? `Historique :\n${history}` : ''}
-Quel est ton mot ? Réponds avec UN SEUL MOT uniquement.`;
+  const user = `Round ${roundNum}. Your character: ${character}.
+${otherWords ? `Words said this round:\n${otherWords}\n` : 'You speak first this round.'}
+${history ? `Previous rounds:\n${history}` : ''}
+Reply with ONE French word only.`;
 
   const word = await callClaude(system, user);
 
@@ -168,12 +168,15 @@ async function botCastVote(room, code, botName) {
     .map(n => `${n} — ${(allWords[n] || ['(rien)']).join(', ')}`)
     .join('\n');
 
-  const system = `Tu joues à Undercover. Ton personnage est : ${character}
-Tu dois voter pour éliminer le joueur dont les mots te semblent les MOINS cohérents avec ton personnage.
-Tu ne sais pas si tu es civil ou undercover — tu votes honnêtement selon ton analyse.
-Réponds UNIQUEMENT avec le prénom exact du joueur à éliminer, rien d'autre.`;
+  const system = `You are playing Undercover. Your character is: ${character}. Reply with ONE name only.
+Analyze each player's words. Vote to eliminate the player whose words seem LEAST related to your character.
+Reply with ONLY the exact player name, nothing else, no explanation.`;
 
-  const user = `Voici les mots des autres joueurs :\n${wordSummary}\n\nQui votes-tu pour éliminer ? (un seul prénom)`;
+  const user = `Your character: ${character}
+Players and their words:
+${wordSummary}
+
+Which player's words are least consistent with your character? Reply with their name only.`;
 
   const answer = await callClaude(system, user);
 
@@ -218,11 +221,12 @@ function scheduleBotTurn(room, code, botName) {
 function scheduleBotVotes(room, code) {
   const bots = getAlive(room).filter(n => room.players[n]?.isBot);
   bots.forEach((botName, i) => {
-    setTimeout(() => {
+    // Stagger bots: first after 2s, then every 1.5s to avoid Groq rate limits
+    setTimeout(async () => {
       if (room.phase === 'playing' && room.subPhase === 'vote' && !room.players[botName]?.voted) {
-        botCastVote(room, code, botName);
+        await botCastVote(room, code, botName);
       }
-    }, BOT_THINK_DELAY + i * 1200);
+    }, 2000 + i * 1500);
   });
 }
 
@@ -937,6 +941,16 @@ io.on('connection', (socket) => {
     room.votes[rk][name] = target;
     room.players[name].voted = true;
     broadcastRoom(code);
+
+    // Trigger any bots that haven't voted yet (in case scheduleBotVotes missed them)
+    const aliveBots = getAlive(room).filter(n => room.players[n]?.isBot && !room.players[n]?.voted);
+    aliveBots.forEach((botName, i) => {
+      setTimeout(() => {
+        if (room.phase === 'playing' && room.subPhase === 'vote' && !room.players[botName]?.voted) {
+          botCastVote(room, code, botName);
+        }
+      }, 600 + i * 800);
+    });
 
     // Check majority
     const alive = getAlive(room);

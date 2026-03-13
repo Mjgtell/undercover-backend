@@ -500,22 +500,10 @@ function clearTimer(code) {
 }
 
 // ═══════════════════════════════
-//  JIKAN
+//  CHARACTER IMAGES (hardcoded)
 // ═══════════════════════════════
-async function fetchCharImage(charName, animeName) {
-  try {
-    const q = encodeURIComponent(charName);
-    const resp = await fetch(`https://api.jikan.moe/v4/characters?q=${q}&limit=5`);
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    if (!data.data?.length) return null;
-    let best = data.data[0];
-    const animeWord = animeName.toLowerCase().split(' ')[0];
-    for (const c of data.data) {
-      if ((c.anime||[]).some(a => a.anime?.title?.toLowerCase().includes(animeWord))) { best = c; break; }
-    }
-    return best.images?.webp?.image_url || best.images?.jpg?.image_url || null;
-  } catch { return null; }
+function fetchCharImage(charName) {
+  return CHARACTER_IMAGES[charName] || null;
 }
 
 // ═══════════════════════════════
@@ -662,10 +650,8 @@ io.on('connection', (socket) => {
     room.settings = s;
 
     const pair = getRandomPair(g);
-    const [img1, img2] = await Promise.all([
-      fetchCharImage(pair.civilian, pair.anime1),
-      fetchCharImage(pair.undercover, pair.anime2),
-    ]);
+    const img1 = fetchCharImage(pair.civilian);
+    const img2 = fetchCharImage(pair.undercover);
     pair.civilianImg = img1;
     pair.undercoverImg = img2;
 

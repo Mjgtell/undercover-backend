@@ -4,6 +4,228 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
 
+// ═══════════════════════════════
+//  BOT ENGINE
+// ═══════════════════════════════
+
+const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
+const BOT_NAMES = ['Kaito','Yuki','Ryu','Hana','Sora','Nami','Ren','Aoi'];
+const BOT_THINK_DELAY = 2800; // ms before bot "responds" — feels human
+
+async function callClaude(systemPrompt, userPrompt) {
+  try {
+    const res = await fetch(ANTHROPIC_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 60,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+    const data = await res.json();
+    return data.content?.[0]?.text?.trim() || null;
+  } catch (e) {
+    console.error('Claude API error:', e.message);
+    return null;
+  }
+}
+
+// Pick a bot name not already in use
+function pickBotName(room) {
+  const used = Object.keys(room.players);
+  return BOT_NAMES.find(n => !used.includes(n)) || 'Bot' + Math.floor(Math.random()*99);
+}
+
+// Bot submits its word for its turn
+async function botSubmitWord(room, code, botName) {
+  const assignment = room.assignments[botName];
+  if (!assignment) return;
+
+  const character = assignment.word; // just the character name, NOT the role
+  const rk = `round${room.round}`;
+  const wordsThisRound = room.words[rk] || {};
+
+  // Words already said by others this round
+  const otherWords = Object.entries(wordsThisRound)
+    .filter(([n]) => n !== botName)
+    .map(([n, w]) => `${n}: "${w}"`)
+    .join('\n');
+
+  // History of previous rounds
+  let history = '';
+  for (let r = 1; r < room.round; r++) {
+    const rk2 = `round${r}`;
+    const prev = Object.entries(room.words[rk2] || {})
+      .map(([n, w]) => `${n}: "${w}"`)
+      .join(', ');
+    if (prev) history += `Tour ${r} — ${prev}\n`;
+  }
+
+  const system = `Tu joues à Undercover, un jeu de déduction.
+Ton personnage secret est : ${character}
+Tu dois donner UN SEUL MOT qui décrit subtilement ton personnage.
+
+RÈGLE ABSOLUE : ne jamais dire le nom ou partie du nom du personnage.
+
+STRATÉGIE (très important) :
+- Tour 1-2 : donne un mot VAGUE et universel qui pourrait s'appliquer à beaucoup de personnages. Exemples : "combat", "force", "mystère", "regard", "silence". Évite les mots trop précis qui te grillent.
+- Tour 3+ : tu peux être légèrement plus précis mais reste prudent.
+- Observe les mots des autres pour rester cohérent sans te démarquer.
+- UN SEUL MOT. Pas de phrase. Pas d'explication.`;
+
+  const user = `Tour ${room.round}.
+${otherWords ? `Mots déjà dits ce tour :\n${otherWords}\n` : 'Tu es le premier à parler ce tour.'}
+${history ? `Historique :\n${history}` : ''}
+Quel est ton mot ? Réponds avec UN SEUL MOT uniquement.`;
+
+  const word = await callClaude(system, user);
+
+  // Fallback if API fails or returns bad response
+  const fallbacks = ['courage', 'force', 'mystère', 'regard', 'combat', 'silence', 'volonté', 'puissance'];
+  const finalWord = (word && word.split(' ').length === 1 && word.length < 30)
+    ? word
+    : fallbacks[Math.floor(Math.random() * fallbacks.length)];
+
+  // Check it's not blocked
+  const blocked = assignment.blockedWords || [];
+  const wLower = finalWord.toLowerCase().replace(/[^a-zàâäéèêëîïôùûü]/gi, '');
+  const isBlocked = blocked.some(b => wLower.includes(b) || b.includes(wLower));
+
+  if (isBlocked) {
+    // Just use a safe fallback
+    return submitBotWordToRoom(room, code, botName, fallbacks[0]);
+  }
+
+  return submitBotWordToRoom(room, code, botName, finalWord);
+}
+
+function submitBotWordToRoom(room, code, botName, word) {
+  const rk = `round${room.round}`;
+  if (!room.words[rk]) room.words[rk] = {};
+  if (room.words[rk][botName]) return; // already submitted
+
+  room.words[rk][botName] = word;
+  io.to(code).emit('word:revealed', { player: botName, word, round: room.round });
+  io.to(code).emit('toast', `🤖 ${botName} a joué`);
+
+  // Advance turn (same logic as word:submit handler)
+  room.currentTurnIndex++;
+  const aliveTurnOrder = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected);
+  const allDone = aliveTurnOrder.every(n => room.words[rk][n]);
+
+  if (allDone) {
+    const votingLocked = room.round < (room.votingUnlockedAtRound || 2);
+    if (votingLocked) {
+      io.to(code).emit('toast', `Tour ${room.round} terminé — tour ${room.round + 1} !`);
+      broadcastRoom(code);
+      setTimeout(() => nextRound(room, code), 1400);
+    } else {
+      room.subPhase = 'vote';
+      Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
+      broadcastRoom(code);
+      if (room.settings?.wordTimer) startTimer(code, VOTE_TIMER_SECS, 'vote');
+    }
+  } else {
+    const nextPlayer = aliveTurnOrder[room.currentTurnIndex % aliveTurnOrder.length];
+    broadcastRoom(code);
+    io.to(code).emit('turn:next', { player: nextPlayer });
+    // If next player is also a bot, chain
+    if (room.players[nextPlayer]?.isBot) {
+      setTimeout(() => botSubmitWord(room, code, nextPlayer), BOT_THINK_DELAY);
+    } else {
+      if (room.settings?.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
+    }
+  }
+}
+
+// Bot casts its vote — analyzes all words vs its own character, no role knowledge
+async function botCastVote(room, code, botName) {
+  const assignment = room.assignments[botName];
+  if (!assignment) return;
+
+  const character = assignment.word; // bot only knows its character, not its role
+  const alive = getAlive(room).filter(n => n !== botName);
+  if (alive.length === 0) return;
+
+  // Collect all words from all rounds
+  let allWords = {};
+  for (let r = 1; r <= room.round; r++) {
+    const rk = `round${r}`;
+    Object.entries(room.words[rk] || {}).forEach(([n, w]) => {
+      if (!allWords[n]) allWords[n] = [];
+      allWords[n].push(`tour ${r}: "${w}"`);
+    });
+  }
+
+  const wordSummary = alive
+    .map(n => `${n} — ${(allWords[n] || ['(rien)']).join(', ')}`)
+    .join('\n');
+
+  const system = `Tu joues à Undercover. Ton personnage est : ${character}
+Tu dois voter pour éliminer le joueur dont les mots te semblent les MOINS cohérents avec ton personnage.
+Tu ne sais pas si tu es civil ou undercover — tu votes honnêtement selon ton analyse.
+Réponds UNIQUEMENT avec le prénom exact du joueur à éliminer, rien d'autre.`;
+
+  const user = `Voici les mots des autres joueurs :\n${wordSummary}\n\nQui votes-tu pour éliminer ? (un seul prénom)`;
+
+  const answer = await callClaude(system, user);
+
+  // Find the closest match to a valid player name
+  const target = alive.find(n => answer && answer.toLowerCase().includes(n.toLowerCase()))
+    || alive[Math.floor(Math.random() * alive.length)]; // fallback: random
+
+  // Submit the vote
+  const rk = `round${room.round}`;
+  if (!room.votes[rk]) room.votes[rk] = {};
+  room.votes[rk][botName] = target;
+  room.players[botName].voted = true;
+  broadcastRoom(code);
+  io.to(code).emit('toast', `🤖 ${botName} a voté`);
+
+  // Check if all have voted
+  const aliveAll = getAlive(room);
+  if (aliveAll.every(n => room.votes[rk][n])) {
+    clearTimer(code);
+    const tally = {};
+    aliveAll.forEach(n => { tally[n] = 0; });
+    Object.values(room.votes[rk]).forEach(t => { if (tally[t] !== undefined) tally[t]++; });
+    const maxV = Math.max(...Object.values(tally));
+    const tied = aliveAll.filter(n => tally[n] === maxV);
+    if (tied.length === 1) {
+      eliminatePlayer(room, tied[0], code);
+    } else {
+      io.to(code).emit('vote:tie', { tied, tally });
+      broadcastRoom(code);
+    }
+  }
+}
+
+// Called when it's a bot's turn (word phase)
+function scheduleBotTurn(room, code, botName) {
+  if (!room.players[botName]?.isBot) return;
+  io.to(code).emit('toast', `🤖 ${botName} réfléchit…`);
+  setTimeout(() => botSubmitWord(room, code, botName), BOT_THINK_DELAY);
+}
+
+// Called when vote phase starts — bots vote after a delay
+function scheduleBotVotes(room, code) {
+  const bots = getAlive(room).filter(n => room.players[n]?.isBot);
+  bots.forEach((botName, i) => {
+    setTimeout(() => {
+      if (room.phase === 'playing' && room.subPhase === 'vote' && !room.players[botName]?.voted) {
+        botCastVote(room, code, botName);
+      }
+    }, BOT_THINK_DELAY + i * 1200);
+  });
+}
+
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -195,7 +417,7 @@ function genCode() {
 function sanitizeRoom(room) {
   const r = { ...room, players: {}, spectators: room.spectators || [], turnOrder: room.turnOrder || [], currentTurnIndex: room.currentTurnIndex ?? 0 };
   for (const [n, p] of Object.entries(room.players)) {
-    r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready, voted: p.voted, isSpectator: p.isSpectator || false };
+    r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready, voted: p.voted, isSpectator: p.isSpectator || false, isBot: p.isBot || false };
   }
   return r;
 }
@@ -251,6 +473,7 @@ function startTimer(code, seconds, phase) {
         } else {
           r.subPhase = 'vote';
           broadcastRoom(code);
+          scheduleBotVotes(r, code);
           startTimer(code, VOTE_TIMER_SECS, 'vote');
         }
       } else {
@@ -494,7 +717,12 @@ io.on('connection', (socket) => {
       broadcastRoom(code);
       const firstPlayer = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected)[0];
       if (firstPlayer) io.to(code).emit('turn:next', { player: firstPlayer });
-      if (room.settings.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
+      // Bots are always "ready" — if first player is a bot, schedule its turn
+      if (firstPlayer && room.players[firstPlayer]?.isBot) {
+        scheduleBotTurn(room, code, firstPlayer);
+      } else if (room.settings.wordTimer) {
+        startTimer(code, WORD_TIMER_SECS, 'words');
+      }
     }
   });
 
@@ -555,6 +783,7 @@ io.on('connection', (socket) => {
         room.subPhase = 'vote';
         Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
         broadcastRoom(code);
+        scheduleBotVotes(room, code);
         if (room.settings.wordTimer) startTimer(code, VOTE_TIMER_SECS, 'vote');
       }
     } else {
@@ -562,8 +791,12 @@ io.on('connection', (socket) => {
       const nextPlayer = newAliveTurnOrder[room.currentTurnIndex % newAliveTurnOrder.length];
       broadcastRoom(code);
       io.to(code).emit('turn:next', { player: nextPlayer });
-      // Start per-player timer if enabled
-      if (room.settings.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
+      // If next player is a bot, schedule its turn; else start timer
+      if (room.players[nextPlayer]?.isBot) {
+        scheduleBotTurn(room, code, nextPlayer);
+      } else if (room.settings.wordTimer) {
+        startTimer(code, WORD_TIMER_SECS, 'words');
+      }
     }
   });
 
@@ -658,6 +891,31 @@ io.on('connection', (socket) => {
     broadcastRoom(code);
   });
 
+
+  // ── ADD BOT ──
+  socket.on('bot:add', () => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name || room.phase !== 'lobby') return;
+    if (Object.keys(room.players).length >= 10) return socket.emit('error', 'Salle pleine !');
+    const botName = pickBotName(room);
+    room.players[botName] = { socketId: null, connected: true, eliminated: false, ready: true, voted: false, isSpectator: false, isBot: true };
+    if (!room.scores[botName]) room.scores[botName] = { wins: 0 };
+    broadcastRoom(code);
+    io.to(code).emit('toast', `🤖 ${botName} a rejoint la salle !`);
+  });
+
+  // ── REMOVE BOT ──
+  socket.on('bot:remove', ({ botName }) => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name || room.phase !== 'lobby') return;
+    if (!room.players[botName]?.isBot) return;
+    delete room.players[botName];
+    broadcastRoom(code);
+    io.to(code).emit('toast', `🤖 ${botName} a quitté la salle`);
+  });
+
   // ══════════════════════════════════════
   //  WEBRTC SIGNALING (relay only)
   // ══════════════════════════════════════
@@ -750,7 +1008,11 @@ function nextRound(room, code) {
   const aliveTurnOrder = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected);
   const firstPlayer = aliveTurnOrder[0];
   if (firstPlayer) io.to(code).emit('turn:next', { player: firstPlayer });
-  if (room.settings?.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
+  if (firstPlayer && room.players[firstPlayer]?.isBot) {
+    scheduleBotTurn(room, code, firstPlayer);
+  } else if (room.settings?.wordTimer) {
+    startTimer(code, WORD_TIMER_SECS, 'words');
+  }
 }
 
 function endGame(room, code, outcome) {

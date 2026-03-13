@@ -260,300 +260,108 @@ const io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] },
 // ═══════════════════════════════
 const PAIRS = {
   shonen: [
-    // Héros solaires qui sourient même dans la douleur, puissance née de la volonté pure
-    { civilian:'Naruto Uzumaki', undercover:'Izuku Midoriya', anime1:'Naruto', anime2:'My Hero Academia', hint:'Héros rejetés devenus symboles d\'espoir' },
-    // Deux garçons calmes, cheveux sombres, pouvoirs surnaturels liés à la mort, aura bleue/froide
-    { civilian:'Tanjiro Kamado', undercover:'Yusuke Urameshi', anime1:'Demon Slayer', anime2:'Yu Yu Hakusho', hint:'Garçons bienveillants devenus chasseurs de démons' },
-    // Deux rivaux froids, cheveux sombres dressés, regard intense, ego de guerrier
-    { civilian:'Sasuke Uchiha', undercover:'Vegeta', anime1:'Naruto', anime2:'Dragon Ball Z', hint:'Rivaux orgueilleux obsédés par la puissance' },
-    // Deux guerriers petits mais dévastateurs, regard d'acier, réputation de massacre
-    { civilian:'Levi Ackerman', undercover:'Killua Zoldyck', anime1:'Attack on Titan', anime2:'Hunter x Hunter', hint:'Tueurs froids à la vitesse surhumaine' },
-    // Deux capitaines fous, sourire constant, corps élastique/libre, vivent pour l'aventure
-    { civilian:'Monkey D. Luffy', undercover:'Gon Freecss', anime1:'One Piece', anime2:'Hunter x Hunter', hint:'Garçons solaires à la force brute et pure' },
-    // Deux êtres surpuissants décontractés, bras croisés, personne ne peut les toucher
-    { civilian:'Gojo Satoru', undercover:'Saitama', anime1:'Jujutsu Kaisen', anime2:'One Punch Man', hint:'Les plus forts de leur monde, mais détachés' },
-    // Deux protagonistes qui basculent dans la noirceur, transformation physique, perte d'humanité
-    { civilian:'Eren Yeager', undercover:'Kaneki Ken', anime1:'Attack on Titan', anime2:'Tokyo Ghoul', hint:'Jeunes hommes consumés par leur propre monstre' },
-    // Deux génies froids qui planifient tout, trahison/sacrifice, portent des masques émotionnels
-    { civilian:'Itachi Uchiha', undercover:'Aizen Sosuke', anime1:'Naruto', anime2:'Bleach', hint:'Géniaux traîtres au sacrifice calculé' },
-    // Deux porteurs d'un être destructeur en eux, corps impulsif, pouvoir incontrôlable
-    { civilian:'Yuji Itadori', undercover:'Denji', anime1:'Jujutsu Kaisen', anime2:'Chainsaw Man', hint:'Hôtes d\'une entité dévastatrice' },
-    // Deux petits protagonistes blonds, amputés ou marqués, alchimie vs magie, quête de rédemption
-    { civilian:'Edward Elric', undercover:'Asta', anime1:'Fullmetal Alchemist', anime2:'Black Clover', hint:'Petits blondins déterminés malgré tout' },
-    // Deux antagonistes ultimes, aristocratiques, pouvoirs de régénération absolue
-    { civilian:'Ryomen Sukuna', undercover:'Muzan Kibutsuji', anime1:'Jujutsu Kaisen', anime2:'Demon Slayer', hint:'Rois des démons quasi-immortels' },
-    // Deux guerriers rouges au feu, cheveux vifs, chaleur et impulsivité
-    { civilian:'Natsu Dragneel', undercover:'Portgas D. Ace', anime1:'Fairy Tail', anime2:'One Piece', hint:'Utilisateurs de flammes aux cheveux sombres' },
-    // Deux hommes au regard impassible, masque/chapeau, enseignent en cachant leur vraie force
-    { civilian:'Kakashi Hatake', undercover:'Aizawa Shouta', anime1:'Naruto', anime2:'My Hero Academia', hint:'Profs nonchalants qui cachent une puissance réelle' },
+    { civilian:'Naruto Uzumaki', undercovers:['Izuku Midoriya','Gon Freecss','Luffy','Asta','Edward Elric'], hint:'Héros rejetés devenus symboles d\'espoir' },
+    { civilian:'Levi Ackerman', undercovers:['Killua Zoldyck','Hiei','Zoro','Mikasa Ackerman','Guts'], hint:'Combattants froids à la vitesse surhumaine' },
+    { civilian:'Sasuke Uchiha', undercovers:['Vegeta','Hiei','Byakuya Kuchiki','Neji Hyuga','Griffith'], hint:'Rivaux orgueilleux obsédés par la puissance' },
+    { civilian:'Gojo Satoru', undercovers:['Saitama','Accelerator','Aizen Sosuke','Goku','Lelouch vi Britannia'], hint:'Les plus forts de leur monde, détachés' },
+    { civilian:'Eren Yeager', undercovers:['Kaneki Ken','Shigaraki Tomura','Denji','Yuji Itadori','Griffith'], hint:'Jeunes hommes consumés par leur propre monstre' },
+    { civilian:'Itachi Uchiha', undercovers:['Aizen Sosuke','Lelouch vi Britannia','Griffith','L Lawliet','Giorno Giovanna'], hint:'Géniaux traîtres au sacrifice calculé' },
+    { civilian:'Kakashi Hatake', undercovers:['Aizawa Shouta','Roy Mustang','Giyu Tomioka','Byakuya Kuchiki','Levi Ackerman'], hint:'Profs nonchalants cachant une puissance réelle' },
+    { civilian:'Yuji Itadori', undercovers:['Denji','Natsu Dragneel','Asta','Gon Freecss','Monkey D. Luffy'], hint:'Hôtes d\'une entité dévastatrice' },
+    { civilian:'Ryomen Sukuna', undercovers:['Muzan Kibutsuji','Aizen Sosuke','Griffith','Madara Uchiha','Ainz Ooal Gown'], hint:'Rois des démons quasi-immortels' },
+    { civilian:'Natsu Dragneel', undercovers:['Portgas D. Ace','Roy Mustang','Endeavor','Shinra Kusakabe','Rengoku'], hint:'Utilisateurs de flammes impulsifs' },
+    { civilian:'Monkey D. Luffy', undercovers:['Gon Freecss','Naruto Uzumaki','Asta','Edward Elric','Denji'], hint:'Garçons solaires à la force brute et pure' },
+    { civilian:'Megumi Fushiguro', undercovers:['Byakuya Kuchiki','Neji Hyuga','Sasuke Uchiha','Levi Ackerman','Giyu Tomioka'], hint:'Invocateurs froids au style aristocratique' },
+    { civilian:'Shigaraki Tomura', undercovers:['Griffith','Kaneki Ken','Eren Yeager','Mahito','Muzan Kibutsuji'], hint:'Antagonistes qui veulent détruire l\'ordre établi' },
   ],
 
   fantasy: [
-    // Deux épéistes solitaires dans un monde de jeu/donjon, noirs vêtus, yeux vides mais déterminés
-    { civilian:'Kirito', undercover:'Bell Cranel', anime1:'Sword Art Online', anime2:'DanMachi', hint:'Épéistes solitaires progressant dans un donjon' },
-    // Deux isekai qui souffrent à répétition, réinitialisations/revivre la mort, psychologie brisée
-    { civilian:'Subaru Natsuki', undercover:'Naofumi Iwatani', anime1:'Re:Zero', anime2:'Shield Hero', hint:'Isekai traités injustement qui repartent de zéro' },
-    // Deux seigneurs tout-puissants dans un monde fantastique, froids, manipulateurs mais complexes
-    { civilian:'Ainz Ooal Gown', undercover:'Lelouch vi Britannia', anime1:'Overlord', anime2:'Code Geass', hint:'Stratèges masqués qui jouent aux échecs avec des vies' },
-    // Deux filles mystérieuses non-humaines, longues tresses, regard distant, découvrent les émotions
-    { civilian:'Zero Two', undercover:'Violet Evergarden', anime1:'Darling in the FranXX', anime2:'Violet Evergarden', hint:'Filles hybrides qui apprennent à être humaines' },
-    // Deux magiciens overpowered réincarnés, vie précédente de gamer, nouveau monde de magie
-    { civilian:'Rudeus Greyrat', undercover:'Rimuru Tempest', anime1:'Mushoku Tensei', anime2:'Tensura', hint:'Réincarnés overpowered qui construisent leur empire' },
-    // Deux filles-renard, oreilles et queue, loyales et espièles, lien fort avec leur compagnon
-    { civilian:'Holo', undercover:'Raphtalia', anime1:'Spice & Wolf', anime2:'Shield Hero', hint:'Bêtes-humaines loyales à leur partenaire' },
-    // Deux stratèges cérébaux bloqués dans un monde de jeu, lunettes ou regard calculateur
-    { civilian:'Shiroe', undercover:'Sora', anime1:'Log Horizon', anime2:'No Game No Life', hint:'Gamers stratèges qui dominent leur monde' },
-    // Deux héroïnes cheveux bleus, calmes, dévouées, pouvoirs de glace ou d'eau
-    { civilian:'Rem', undercover:'Aqua', anime1:'Re:Zero', anime2:'KonoSuba', hint:'Filles aux pouvoirs de froid/eau dans un isekai' },
-    // Deux chevaliers en armure, sens de l'honneur absolu, servent leur maître corps et âme
-    { civilian:'Saber', undercover:'Erza Scarlet', anime1:'Fate/stay night', anime2:'Fairy Tail', hint:'Guerrières en armure à l\'honneur inflexible' },
-    // Deux protagonistes isekai comiques, malchanceux mais débrouillards
-    { civilian:'Kazuma Sato', undercover:'Hajime Nagumo', anime1:'KonoSuba', anime2:'Arifureta', hint:'Isekai rejetés par leur équipe qui s\'en sortent quand même' },
+    { civilian:'Kirito', undercovers:['Bell Cranel','Subaru Natsuki','Naofumi Iwatani','Rudeus Greyrat','Hajime Nagumo'], hint:'Solitaires progressant dans un monde RPG' },
+    { civilian:'Ainz Ooal Gown', undercovers:['Lelouch vi Britannia','Aizen Sosuke','Shiroe','L Lawliet','Rimuru Tempest'], hint:'Stratèges masqués qui jouent avec des vies' },
+    { civilian:'Rem', undercovers:['Aqua','Raphtalia','Holo','Violet Evergarden','Zero Two'], hint:'Filles loyales à leur partenaire dans un isekai' },
+    { civilian:'Rimuru Tempest', undercovers:['Ainz Ooal Gown','Rudeus Greyrat','Subaru Natsuki','Kazuma Sato','Naofumi Iwatani'], hint:'Réincarnés overpowered construisant leur empire' },
+    { civilian:'Zero Two', undercovers:['Violet Evergarden','Raphtalia','Holo','Rem','Saber'], hint:'Hybrides qui apprennent à être humaines' },
+    { civilian:'Saber', undercovers:['Erza Scarlet','Mikasa Ackerman','Motoko Kusanagi','Violet Evergarden','Yor Forger'], hint:'Guerrières en armure à l\'honneur inflexible' },
+    { civilian:'Kazuma Sato', undercovers:['Subaru Natsuki','Naofumi Iwatani','Hajime Nagumo','Rudeus Greyrat','Shiroe'], hint:'Isekai inadaptés qui s\'en sortent quand même' },
+    { civilian:'Holo', undercovers:['Raphtalia','Rem','Zero Two','Violet Evergarden','Saber'], hint:'Bêtes-humaines loyales à leur partenaire' },
+    { civilian:'Subaru Natsuki', undercovers:['Naofumi Iwatani','Kirito','Kazuma Sato','Rudeus Greyrat','Shinji Ikari'], hint:'Isekai traités injustement qui repartent de zéro' },
+    { civilian:'Lelouch vi Britannia', undercovers:['Ainz Ooal Gown','L Lawliet','Aizen Sosuke','Light Yagami','Giorno Giovanna'], hint:'Génies stratèges au plan mondial' },
+    { civilian:'Shiroe', undercovers:['Ainz Ooal Gown','Kazuma Sato','Kirito','L Lawliet','Ayanokoji Kiyotaka'], hint:'Gamers stratèges qui dominent leur monde' },
+    { civilian:'Violet Evergarden', undercovers:['Saber','Rem','Zero Two','Raphtalia','Yor Forger'], hint:'Soldates brisées qui redécouvrent l\'humanité' },
   ],
 
   action: [
-    // Deux détectives génies opposés, l'un assis bizarrement, l'autre debout, guerre psychologique
-    { civilian:'L Lawliet', undercover:'Shikamaru Nara', anime1:'Death Note', anime2:'Naruto', hint:'Génies paresseux en apparence, redoutables en vrai' },
-    // Deux tireurs d'élite froids, visage émacié, yeux enfoncés, silhouette longiligne
-    { civilian:'Aizen Sosuke', undercover:'Griffith', anime1:'Bleach', anime2:'Berserk', hint:'Anges déchus au plan millénaire et au sourire glacial' },
-    // Deux guerriers solitaires en noir, cicatrices, code moral strict, combattent seuls
-    { civilian:'Zoro', undercover:'Guts', anime1:'One Piece', anime2:'Berserk', hint:'Combattants à l\'épée solitaires et marqués' },
-    // Deux antagonistes au sourire diabolique, manipulation, société corrompue = leur terrain
-    { civilian:'Shigaraki Tomura', undercover:'Griffith', anime1:'My Hero Academia', anime2:'Berserk', hint:'Antagonistes qui veulent détruire l\'ordre établi' },
-    // Deux exorcistes aux pouvoirs rares, cheveux sombres, austères, techniques spéciales
-    { civilian:'Megumi Fushiguro', undercover:'Byakuya Kuchiki', anime1:'Jujutsu Kaisen', anime2:'Bleach', hint:'Guerriers aristocratiques froids aux pouvoirs de convocation' },
-    // Deux pyrokinésistes militaires ambitieux, rouge/flamme, père absent ou ennemi
-    { civilian:'Roy Mustang', undercover:'Endeavor', anime1:'Fullmetal Alchemist', anime2:'My Hero Academia', hint:'Héros pyrokinésistes ambitieux et mauvais pères' },
-    // Deux femmes soldats ultimes, cheveux courts, pragmatiques, corps modifié
-    { civilian:'Mikasa Ackerman', undercover:'Motoko Kusanagi', anime1:'Attack on Titan', anime2:'Ghost in the Shell', hint:'Soldates froides au corps modifié, protègent leur prochain' },
-    // Deux piliers calmes, cheveux longs ou attachés, technique parfaite, disent peu
-    { civilian:'Giyu Tomioka', undercover:'Neji Hyuga', anime1:'Demon Slayer', anime2:'Naruto', hint:'Combattants d\'élite froids au style technique parfait' },
-    // Deux petits psychiques, expression neutre, destruction à distance sans effort
-    { civilian:'Mob', undercover:'Tatsumaki', anime1:'Mob Psycho 100', anime2:'One Punch Man', hint:'Psychiques overpowered qui semblent absents' },
-    // Deux anti-héros aux pouvoirs de destruction totale, isolés, incompris
-    { civilian:'Accelerator', undercover:'Hisoka Morow', anime1:'A Certain Magical Index', anime2:'Hunter x Hunter', hint:'Êtres supérieurs dérangés qui cherchent une vraie bataille' },
+    { civilian:'L Lawliet', undercovers:['Shikamaru Nara','Ayanokoji Kiyotaka','Lelouch vi Britannia','Light Yagami','Shiroe'], hint:'Génies paresseux redoutables en vrai' },
+    { civilian:'Zoro', undercovers:['Guts','Levi Ackerman','Mikasa Ackerman','Thorfinn','Giyu Tomioka'], hint:'Combattants à l\'épée solitaires et marqués' },
+    { civilian:'Mikasa Ackerman', undercovers:['Motoko Kusanagi','Saber','Erza Scarlet','Yor Forger','Violet Evergarden'], hint:'Soldates froides au corps modifié' },
+    { civilian:'Roy Mustang', undercovers:['Endeavor','Natsu Dragneel','Portgas D. Ace','Rengoku','Shinra Kusakabe'], hint:'Héros pyrokinésistes ambitieux' },
+    { civilian:'Giyu Tomioka', undercovers:['Neji Hyuga','Byakuya Kuchiki','Levi Ackerman','Sasuke Uchiha','Megumi Fushiguro'], hint:'Combattants d\'élite froids au style parfait' },
+    { civilian:'Guts', undercovers:['Thorfinn','Zoro','Levi Ackerman','Mikasa Ackerman','Giyu Tomioka'], hint:'Guerriers solitaires marqués par la tragédie' },
+    { civilian:'Jotaro Kujo', undercovers:['Giorno Giovanna','Hiei','Levi Ackerman','Guts','Zoro'], hint:'Combattants stoïques à l\'aura intimidante' },
+    { civilian:'Accelerator', undercovers:['Hisoka Morow','Tatsumaki','Mob','Gojo Satoru','Saitama'], hint:'Êtres supérieurs dérangés cherchant une vraie bataille' },
+    { civilian:'Spike Spiegel', undercovers:['Vash the Stampede','Revy','Yato','Zoro','Guts'], hint:'Hors-la-loi décontractés avec un passé sombre' },
+    { civilian:'Motoko Kusanagi', undercovers:['Mikasa Ackerman','Saber','Yor Forger','Revy','Violet Evergarden'], hint:'Soldates cybernétiques à l\'identité questionnée' },
+    { civilian:'Light Yagami', undercovers:['Lelouch vi Britannia','L Lawliet','Ayanokoji Kiyotaka','Giorno Giovanna','Ainz Ooal Gown'], hint:'Génies qui se croient des dieux' },
+    { civilian:'Hisoka Morow', undercovers:['Accelerator','Mahito','Griffith','Aizen Sosuke','Dio Brando'], hint:'Antagonistes qui jouent avec leurs proies' },
+    { civilian:'Thorfinn', undercovers:['Guts','Zoro','Levi Ackerman','Revy','Spike Spiegel'], hint:'Guerriers brisés en quête de rédemption' },
   ],
 
   romance: [
-    // Deux tsundere blondes explos, petite taille complexée, tombe amoureuse malgré elle
-    { civilian:'Taiga Aisaka', undercover:'Erina Nakiri', anime1:'Toradora', anime2:'Shokugeki no Soma', hint:'Blondes hautaines au cœur tendre caché' },
-    // Deux garçons cyniques mal dans leur peau, monologue intérieur acéré, rejet du monde
-    { civilian:'Hachiman Hikigaya', undercover:'Rei Kiriyama', anime1:'OreGairu', anime2:'March Comes in Like a Lion', hint:'Solitaires intelligents qui observent sans participer' },
-    // Deux prodiges musicaux traumatisés par leur mère, doigts qui tremblent, larmes sur les touches
-    { civilian:'Kousei Arima', undercover:'Shinichi Chiaki', anime1:'Your Lie in April', anime2:'Nodame Cantabile', hint:'Pianistes prodiges brisés qui se reconstruisent' },
-    // Deux filles discrètes blessées par le passé, communication difficile, lien inattendu
-    { civilian:'Shouko Nishimiya', undercover:'Mei Tachibana', anime1:'A Silent Voice', anime2:'Say I Love You', hint:'Filles solitaires qui apprennent la confiance' },
-    // Deux garçons ordinaires qui se sacrifient pour leur amour, maladroits mais sincères
-    { civilian:'Shoya Ishida', undercover:'Takeo Goda', anime1:'A Silent Voice', anime2:'My Love Story', hint:'Garçons brisés qui se rachètent par amour sincère' },
-    // Deux filles solaires au destin tragique, apportent la lumière puis disparaissent
-    { civilian:'Kaori Miyazono', undercover:'Menma', anime1:'Your Lie in April', anime2:'AnoHana', hint:'Filles lumineuses arrachées trop tôt' },
-    // Deux couples fusionnels bizarre-normal, l'un étrange, l'autre grounded
-    { civilian:'Tohru Honda', undercover:'Oreki Houtarou', anime1:'Fruits Basket', anime2:'Hyouka', hint:'Personnages lumineux/sombres qui s\'équilibrent' },
-    // Deux garçons introvertis tatoués ou marqués, cachent une vraie tendresse
-    { civilian:'Miyamura Izumi', undercover:'Nishikata', anime1:'Horimiya', anime2:'Karakai Jouzu no Takagi-san', hint:'Garçons introvertis qui s\'ouvrent à une seule personne' },
-    // Deux filles espionnes ou doubles visages, adorables dehors, calculatrices dedans
-    { civilian:'Yor Forger', undercover:'Himeno', anime1:'Spy x Family', anime2:'Chainsaw Man', hint:'Femmes douces en apparence, tueuses de métier' },
-    // Deux romances interclasses, différence de statut, tension entre devoir et sentiment
-    { civilian:'Kaguya Shinomiya', undercover:'Yukino Yukinoshita', anime1:'Kaguya-sama', anime2:'OreGairu', hint:'Héritières froides qui tombent amoureuses malgré leur fierté' },
+    { civilian:'Taiga Aisaka', undercovers:['Erina Nakiri','Kaguya Shinomiya','Yukino Yukinoshita','Satsuki Kiryuin','Himeno'], hint:'Blondes hautaines au cœur tendre caché' },
+    { civilian:'Hachiman Hikigaya', undercovers:['Oreki Houtarou','Rei Kiriyama','Ayanokoji Kiyotaka','Shinji Ikari','Nishikata'], hint:'Solitaires intelligents qui observent sans participer' },
+    { civilian:'Kousei Arima', undercovers:['Shinichi Chiaki','Rei Kiriyama','Shinji Ikari','Oreki Houtarou','Shoya Ishida'], hint:'Prodiges brisés qui se reconstruisent' },
+    { civilian:'Shouko Nishimiya', undercovers:['Mei Tachibana','Tohru Honda','Violet Evergarden','Rem','Menma'], hint:'Filles solitaires qui apprennent la confiance' },
+    { civilian:'Kaguya Shinomiya', undercovers:['Yukino Yukinoshita','Taiga Aisaka','Erina Nakiri','Satsuki Kiryuin','Kaguya'], hint:'Héritières froides qui tombent amoureuses malgré leur fierté' },
+    { civilian:'Tohru Honda', undercovers:['Rem','Raphtalia','Violet Evergarden','Shouko Nishimiya','Menma'], hint:'Filles lumineuses qui acceptent tout le monde' },
+    { civilian:'Miyamura Izumi', undercovers:['Shoya Ishida','Nishikata','Hachiman Hikigaya','Oreki Houtarou','Kousei Arima'], hint:'Garçons introvertis qui s\'ouvrent à une seule personne' },
+    { civilian:'Yor Forger', undercovers:['Himeno','Saber','Mikasa Ackerman','Motoko Kusanagi','Erza Scarlet'], hint:'Femmes douces en apparence, tueuses de métier' },
+    { civilian:'Kaori Miyazono', undercovers:['Menma','Violet Evergarden','Shouko Nishimiya','Tohru Honda','Rem'], hint:'Filles lumineuses arrachées trop tôt' },
+    { civilian:'Oreki Houtarou', undercovers:['Hachiman Hikigaya','Rei Kiriyama','Ayanokoji Kiyotaka','Shinji Ikari','L Lawliet'], hint:'Introvertis économes en énergie mais brillants' },
+    { civilian:'Shoya Ishida', undercovers:['Miyamura Izumi','Nishikata','Kousei Arima','Hachiman Hikigaya','Takeo Goda'], hint:'Garçons brisés qui se rachètent par amour sincère' },
+    { civilian:'Yukino Yukinoshita', undercovers:['Kaguya Shinomiya','Taiga Aisaka','Erina Nakiri','Satsuki Kiryuin','Yukino'], hint:'Perfectionnistes froides cachant une vraie sensibilité' },
   ],
 
   sports: [
-    // Deux petits joueurs discrets, visibles seulement à l'impact, changent les matchs en secret
-    { civilian:'Shoyo Hinata', undercover:'Tetsuya Kuroko', anime1:'Haikyuu', anime2:'Kuroko Basketball', hint:'Petits joueurs invisibles au grand impact' },
-    // Deux génies froids qui commandent le terrain, regard perçant, équipe obéit sans discuter
-    { civilian:'Tobio Kageyama', undercover:'Seijuro Akashi', anime1:'Haikyuu', anime2:'Kuroko Basketball', hint:'Génies du terrain qui contrôlent tout' },
-    // Deux attaquants au tir dévastateur, égoïstes assumés, leur puissance est leur identité
-    { civilian:'Yoichi Isagi', undercover:'Ryota Kise', anime1:'Blue Lock', anime2:'Kuroko Basketball', hint:'Attaquants offensifs avec une technique de copie/analyse' },
-    // Deux boxeurs au style offensif brut, partis de rien, cœur de lion
-    { civilian:'Ippo Makunouchi', undercover:'Joe Yabuki', anime1:'Hajime no Ippo', anime2:'Ashita no Joe', hint:'Boxeurs du peuple montant du bas par pur acharnement' },
-    // Deux joueurs de raquette génies arrogants, aucun doute sur leur supériorité
-    { civilian:'Ryoma Echizen', undercover:'Eiichirou Maruo', anime1:'Prince of Tennis', anime2:'Baby Steps', hint:'Adolescents au talent brut qui dominent la raquette' },
-    // Deux pivots physiques impressionnants, présence brute, ancre de l'équipe
-    { civilian:'Takenori Akagi', undercover:'Ushijima Wakatoshi', anime1:'Slam Dunk', anime2:'Haikyuu', hint:'Piliers physiques intransigeants et imposants' },
-    // Deux ace solitaires au shoot parfait, peu loquaces, résultats parlent
-    { civilian:'Eijun Sawamura', undercover:'Furuya Satoru', anime1:'Diamond no Ace', anime2:'Diamond no Ace', hint:'Lanceurs opposés, gauche vs droite, feu vs glace' },
-    // Deux outsiders qui redéfinissent leur sport par la donnée/l'analyse
-    { civilian:'Wataru Kuramochi', undercover:'Hanamichi Sakuragi', anime1:'Diamond no Ace', anime2:'Slam Dunk', hint:'Athlètes bruyants à l\'énergie débordante mais maladroits' },
-    // Deux duos de sport de glisse/vitesse, style élégant, perfection technique
-    { civilian:'Yuri Katsuki', undercover:'Noya Libero', anime1:'Yuri on Ice', anime2:'Haikyuu', hint:'Petits gabarits aux réflexes parfaits, techniques de précision' },
-    // Deux génie de mur défensif, leur valeur niée, finissent essentiels
-    { civilian:'Seishiro Nagi', undercover:'Reo Mikage', anime1:'Blue Lock', anime2:'Blue Lock', hint:'Duo Blue Lock : le génie brut et le stratège raffiné' },
+    { civilian:'Shoyo Hinata', undercovers:['Tetsuya Kuroko','Yoichi Isagi','Ryota Kise','Hanamichi Sakuragi','Noya Libero'], hint:'Petits joueurs invisibles au grand impact' },
+    { civilian:'Tobio Kageyama', undercovers:['Seijuro Akashi','Ryoma Echizen','Takenori Akagi','Ushijima Wakatoshi','Reo Mikage'], hint:'Génies du terrain qui contrôlent tout' },
+    { civilian:'Ippo Makunouchi', undercovers:['Joe Yabuki','Hanamichi Sakuragi','Asta','Naruto Uzumaki','Eijun Sawamura'], hint:'Combattants du peuple montant par pur acharnement' },
+    { civilian:'Tetsuya Kuroko', undercovers:['Shoyo Hinata','Noya Libero','Seishiro Nagi','Yoichi Isagi','Ryota Kise'], hint:'Joueurs discrets à l\'impact décisif' },
+    { civilian:'Yoichi Isagi', undercovers:['Seishiro Nagi','Reo Mikage','Tetsuya Kuroko','Ryota Kise','Shoyo Hinata'], hint:'Attaquants analytiques qui copient et dépassent' },
+    { civilian:'Seijuro Akashi', undercovers:['Tobio Kageyama','Ushijima Wakatoshi','Ryoma Echizen','Takenori Akagi','Ayanokoji Kiyotaka'], hint:'Meneurs absolus qui ne perdent jamais' },
+    { civilian:'Eijun Sawamura', undercovers:['Furuya Satoru','Ippo Makunouchi','Shoyo Hinata','Natsu Dragneel','Asta'], hint:'Lanceurs/attaquants bruts qui évoluent par passion' },
+    { civilian:'Hanamichi Sakuragi', undercovers:['Ippo Makunouchi','Asta','Natsu Dragneel','Gon Freecss','Takeo Goda'], hint:'Débutants arrogants qui deviennent des piliers' },
+    { civilian:'Yuri Katsuki', undercovers:['Kousei Arima','Rei Kiriyama','Shinji Ikari','Eiichirou Maruo','Shouko Nishimiya'], hint:'Athlètes anxieux qui transcendent leurs limites' },
+    { civilian:'Ushijima Wakatoshi', undercovers:['Takenori Akagi','Seijuro Akashi','Tobio Kageyama','Levi Ackerman','Guts'], hint:'Piliers physiques intransigeants et imposants' },
   ],
 
   mix: [
-    // Deux génies de la manipulation, assis bizarrement, tout le monde est leur pion
-    { civilian:'L Lawliet', undercover:'Shikamaru Nara', anime1:'Death Note', anime2:'Naruto', hint:'Génies paresseux qui voient 10 coups d\'avance' },
-    // Deux protagonistes qui jouent à être des dieux, notes de mort/géass, condamnés par leur propre arme
-    { civilian:'Light Yagami', undercover:'Lelouch vi Britannia', anime1:'Death Note', anime2:'Code Geass', hint:'Justiciers déchus qui se prennent pour des dieux' },
-    // Deux cowboys de l'espace détachés, cigarette/posture, passé qu'ils fuient
-    { civilian:'Spike Spiegel', undercover:'Vash the Stampede', anime1:'Cowboy Bebop', anime2:'Trigun', hint:'Tireurs vagabonds au passé douloureux et au sourire triste' },
-    // Deux femmes cyborgs/soldates froides, cheveux courts, efficacité pure
-    { civilian:'Motoko Kusanagi', undercover:'Revy', anime1:'Ghost in the Shell', anime2:'Black Lagoon', hint:'Femmes armées froides et cyniques au corps de combat' },
-    // Deux protagonistes ordinaires dans des situations de mort extraordinaires, ni super ni chanceux
-    { civilian:'Shinji Ikari', undercover:'Makoto Naegi', anime1:'Evangelion', anime2:'Danganronpa', hint:'Garçons ordinaires jetés dans un monde qui veut les tuer' },
-    // Deux esprits/dieux mineurs, sombres, pouvoirs de vitesse/ombre, font peur mais cachent un cœur
-    { civilian:'Yato', undercover:'Hiei', anime1:'Noragami', anime2:'Yu Yu Hakusho', hint:'Esprits sombres et rapides au cœur insoupçonné' },
-    // Deux inventeurs fous du temps/dimension, monologue intérieur de génie, incompris de tous
-    { civilian:'Rintaro Okabe', undercover:'Senku Ishigami', anime1:'Steins;Gate', anime2:'Dr. Stone', hint:'Génies scientifiques dramatiques qui sauvent l\'humanité' },
-    // Deux magical girls contrairement au cliché, uniforme sombre, pouvoirs lourds à porter
-    { civilian:'Homura Akemi', undercover:'Satsuki Kiryuin', anime1:'Puella Magi Madoka', anime2:'Kill la Kill', hint:'Guerrières froides au plan sacrificiel secret' },
-    // Deux protagonistes JoJo au calme intimidant, étudiants en apparence
-    { civilian:'Jotaro Kujo', undercover:'Giorno Giovanna', anime1:'JoJo Part 3', anime2:'JoJo Part 5', hint:'Protagonistes JoJo au calme glacial et au style parfait' },
-    // Deux génies solitaires du jeu, capables de tout retourner seuls
-    { civilian:'Sora', undercover:'Ayanokoji Kiyotaka', anime1:'No Game No Life', anime2:'Classroom of the Elite', hint:'Génies qui jouent à perdre pour mieux gagner' },
-    // Deux combattants petits mais hyper rapides, armés de lames, regard vide
-    { civilian:'Levi Ackerman', undercover:'Zoro', anime1:'Attack on Titan', anime2:'One Piece', hint:'Combattants à la lame les plus forts de leur équipe' },
-    // Deux figures paternelles brisées, force monstrueuse, portent le deuil de quelqu'un
-    { civilian:'Guts', undercover:'Thorfinn', anime1:'Berserk', anime2:'Vinland Saga', hint:'Guerriers nordiques/médiévaux consumés par la vengeance' },
-    // Deux antagonistes au sourire bienveillant qui cache l'horreur
-    { civilian:'Griffith', undercover:'Mahito', anime1:'Berserk', anime2:'Jujutsu Kaisen', hint:'Beaux visages qui dissimulent un vide total d\'humanité' },
-    // Deux filles magiques légères qui cachent une puissance catastrophique
-    { civilian:'Usagi Tsukino', undercover:'Nanoha Takamachi', anime1:'Sailor Moon', anime2:'Magical Girl Lyrical Nanoha', hint:'Magical girls au canon surpuissant et au cœur d\'or' },
-  ]
+    { civilian:'Senku Ishigami', undercovers:['Ayanokoji Kiyotaka','L Lawliet','Rintaro Okabe','Makoto Naegi','Shiroe'], hint:'Génies scientifiques qui sauvent le monde par l\'intelligence' },
+    { civilian:'Rintaro Okabe', undercovers:['Makoto Naegi','Senku Ishigami','L Lawliet','Shinji Ikari','Hachiman Hikigaya'], hint:'Garçons ordinaires face à des événements extraordinaires' },
+    { civilian:'Homura Akemi', undercovers:['Rem','Mikasa Ackerman','Violet Evergarden','Saber','Yor Forger'], hint:'Filles qui sacrifient tout pour protéger une seule personne' },
+    { civilian:'Mob', undercovers:['Tatsumaki','Saitama','Accelerator','Gojo Satoru','Shinji Ikari'], hint:'Psychiques overpowered qui semblent absents' },
+    { civilian:'Spike Spiegel', undercovers:['Vash the Stampede','Yato','Zoro','Revy','Guts'], hint:'Vagabonds cool avec un passé douloureux' },
+    { civilian:'Ayanokoji Kiyotaka', undercovers:['L Lawliet','Light Yagami','Lelouch vi Britannia','Shiroe','Ainz Ooal Gown'], hint:'Génies cachés qui manipulent tout depuis l\'ombre' },
+    { civilian:'Makoto Naegi', undercovers:['Rintaro Okabe','Shinji Ikari','Subaru Natsuki','Kazuma Sato','Shoya Ishida'], hint:'Garçons ordinaires survivant à l\'extraordinaire' },
+    { civilian:'Shinji Ikari', undercovers:['Kousei Arima','Rei Kiriyama','Rintaro Okabe','Mob','Hachiman Hikigaya'], hint:'Protagonistes dépressifs portant le poids du monde' },
+    { civilian:'Vash the Stampede', undercovers:['Spike Spiegel','Yato','Kazuma Sato','Gon Freecss','Monkey D. Luffy'], hint:'Pacifistes redoutables avec un passé mystérieux' },
+    { civilian:'Giorno Giovanna', undercovers:['Lelouch vi Britannia','Light Yagami','Giorno','Ayanokoji Kiyotaka','Ainz Ooal Gown'], hint:'Jeunes au calme glacial qui accèdent au sommet' },
+    { civilian:'Revy', undercovers:['Motoko Kusanagi','Yor Forger','Mikasa Ackerman','Saber','Himeno'], hint:'Femmes de terrain brutales et sans attaches' },
+    { civilian:'Yato', undercovers:['Spike Spiegel','Vash the Stampede','Kazuma Sato','Yusuke Urameshi','Hiei'], hint:'Dieux/esprits décontractés cachant une vraie puissance' },
+  ],
 };
 
-// Generate blocked words from character name (normalized tokens)
-function getBlockedWords(name) {
-  if (!name) return [];
-  return name.toLowerCase()
-    .replace(/[^a-zàâäéèêëîïôùûü\s]/gi, '')
-    .split(/\s+/)
-    .filter(w => w.length > 2);
-}
-
-
-// ═══════════════════════════════
-//  CHARACTER IMAGES MAP
-// ═══════════════════════════════
-const CHARACTER_IMAGES = {
-  'Naruto Uzumaki': 'https://cdn.myanimelist.net/images/characters/2/284121.jpg',
-  'Izuku Midoriya': 'https://cdn.myanimelist.net/images/characters/5/312676.jpg',
-  'Tanjiro Kamado': 'https://cdn.myanimelist.net/images/characters/3/418268.jpg',
-  'Yusuke Urameshi': 'https://cdn.myanimelist.net/images/characters/13/68953.jpg',
-  'Sasuke Uchiha': 'https://cdn.myanimelist.net/images/characters/9/131317.jpg',
-  'Vegeta': 'https://cdn.myanimelist.net/images/characters/4/253393.jpg',
-  'Levi Ackerman': 'https://cdn.myanimelist.net/images/characters/2/241413.jpg',
-  'Killua Zoldyck': 'https://cdn.myanimelist.net/images/characters/7/171471.jpg',
-  'Monkey D. Luffy': 'https://cdn.myanimelist.net/images/characters/9/310307.jpg',
-  'Gon Freecss': 'https://cdn.myanimelist.net/images/characters/11/174517.jpg',
-  'Gojo Satoru': 'https://cdn.myanimelist.net/images/characters/8/450358.jpg',
-  'Saitama': 'https://cdn.myanimelist.net/images/characters/11/207828.jpg',
-  'Eren Yeager': 'https://cdn.myanimelist.net/images/characters/10/108914.jpg',
-  'Kaneki Ken': 'https://cdn.myanimelist.net/images/characters/6/264525.jpg',
-  'Itachi Uchiha': 'https://cdn.myanimelist.net/images/characters/15/72554.jpg',
-  'Aizen Sosuke': 'https://cdn.myanimelist.net/images/characters/4/15631.jpg',
-  'Yuji Itadori': 'https://cdn.myanimelist.net/images/characters/8/448083.jpg',
-  'Denji': 'https://cdn.myanimelist.net/images/characters/10/471020.jpg',
-  'Edward Elric': 'https://cdn.myanimelist.net/images/characters/11/174118.jpg',
-  'Asta': 'https://cdn.myanimelist.net/images/characters/4/357434.jpg',
-  'Ryomen Sukuna': 'https://cdn.myanimelist.net/images/characters/7/448084.jpg',
-  'Muzan Kibutsuji': 'https://cdn.myanimelist.net/images/characters/13/418271.jpg',
-  'Natsu Dragneel': 'https://cdn.myanimelist.net/images/characters/8/131067.jpg',
-  'Portgas D. Ace': 'https://cdn.myanimelist.net/images/characters/7/84638.jpg',
-  'Kakashi Hatake': 'https://cdn.myanimelist.net/images/characters/7/284122.jpg',
-  'Aizawa Shouta': 'https://cdn.myanimelist.net/images/characters/9/312677.jpg',
-  'Kirito': 'https://cdn.myanimelist.net/images/characters/7/204821.jpg',
-  'Bell Cranel': 'https://cdn.myanimelist.net/images/characters/8/272225.jpg',
-  'Subaru Natsuki': 'https://cdn.myanimelist.net/images/characters/7/321076.jpg',
-  'Naofumi Iwatani': 'https://cdn.myanimelist.net/images/characters/13/399793.jpg',
-  'Ainz Ooal Gown': 'https://cdn.myanimelist.net/images/characters/11/311898.jpg',
-  'Lelouch vi Britannia': 'https://cdn.myanimelist.net/images/characters/8/76655.jpg',
-  'Zero Two': 'https://cdn.myanimelist.net/images/characters/8/399332.jpg',
-  'Violet Evergarden': 'https://cdn.myanimelist.net/images/characters/10/380395.jpg',
-  'Rudeus Greyrat': 'https://cdn.myanimelist.net/images/characters/15/430591.jpg',
-  'Rimuru Tempest': 'https://cdn.myanimelist.net/images/characters/15/388376.jpg',
-  'Holo': 'https://cdn.myanimelist.net/images/characters/11/76340.jpg',
-  'Raphtalia': 'https://cdn.myanimelist.net/images/characters/11/399795.jpg',
-  'Shiroe': 'https://cdn.myanimelist.net/images/characters/2/255047.jpg',
-  'Sora': 'https://cdn.myanimelist.net/images/characters/10/265968.jpg',
-  'Rem': 'https://cdn.myanimelist.net/images/characters/13/321079.jpg',
-  'Aqua': 'https://cdn.myanimelist.net/images/characters/13/298097.jpg',
-  'Saber': 'https://cdn.myanimelist.net/images/characters/2/11389.jpg',
-  'Erza Scarlet': 'https://cdn.myanimelist.net/images/characters/3/131068.jpg',
-  'Kazuma Sato': 'https://cdn.myanimelist.net/images/characters/12/298096.jpg',
-  'Hajime Nagumo': 'https://cdn.myanimelist.net/images/characters/8/435578.jpg',
-  'L Lawliet': 'https://cdn.myanimelist.net/images/characters/8/261785.jpg',
-  'Shikamaru Nara': 'https://cdn.myanimelist.net/images/characters/7/74918.jpg',
-  'Griffith': 'https://cdn.myanimelist.net/images/characters/9/91465.jpg',
-  'Zoro': 'https://cdn.myanimelist.net/images/characters/3/100534.jpg',
-  'Guts': 'https://cdn.myanimelist.net/images/characters/10/91462.jpg',
-  'Shigaraki Tomura': 'https://cdn.myanimelist.net/images/characters/3/312678.jpg',
-  'Megumi Fushiguro': 'https://cdn.myanimelist.net/images/characters/6/448086.jpg',
-  'Byakuya Kuchiki': 'https://cdn.myanimelist.net/images/characters/9/15632.jpg',
-  'Roy Mustang': 'https://cdn.myanimelist.net/images/characters/7/174119.jpg',
-  'Endeavor': 'https://cdn.myanimelist.net/images/characters/11/312679.jpg',
-  'Mikasa Ackerman': 'https://cdn.myanimelist.net/images/characters/9/108913.jpg',
-  'Motoko Kusanagi': 'https://cdn.myanimelist.net/images/characters/4/57938.jpg',
-  'Giyu Tomioka': 'https://cdn.myanimelist.net/images/characters/8/418269.jpg',
-  'Neji Hyuga': 'https://cdn.myanimelist.net/images/characters/8/68954.jpg',
-  'Mob': 'https://cdn.myanimelist.net/images/characters/6/320019.jpg',
-  'Tatsumaki': 'https://cdn.myanimelist.net/images/characters/15/207829.jpg',
-  'Accelerator': 'https://cdn.myanimelist.net/images/characters/14/131789.jpg',
-  'Hisoka Morow': 'https://cdn.myanimelist.net/images/characters/14/80554.jpg',
-  'Taiga Aisaka': 'https://cdn.myanimelist.net/images/characters/9/122398.jpg',
-  'Erina Nakiri': 'https://cdn.myanimelist.net/images/characters/9/273614.jpg',
-  'Hachiman Hikigaya': 'https://cdn.myanimelist.net/images/characters/4/245851.jpg',
-  'Rei Kiriyama': 'https://cdn.myanimelist.net/images/characters/7/320023.jpg',
-  'Kousei Arima': 'https://cdn.myanimelist.net/images/characters/10/272469.jpg',
-  'Shinichi Chiaki': 'https://cdn.myanimelist.net/images/characters/5/52435.jpg',
-  'Shouko Nishimiya': 'https://cdn.myanimelist.net/images/characters/10/349230.jpg',
-  'Mei Tachibana': 'https://cdn.myanimelist.net/images/characters/10/193695.jpg',
-  'Shoya Ishida': 'https://cdn.myanimelist.net/images/characters/9/349229.jpg',
-  'Takeo Goda': 'https://cdn.myanimelist.net/images/characters/3/280736.jpg',
-  'Kaori Miyazono': 'https://cdn.myanimelist.net/images/characters/11/272468.jpg',
-  'Menma': 'https://cdn.myanimelist.net/images/characters/8/197019.jpg',
-  'Tohru Honda': 'https://cdn.myanimelist.net/images/characters/3/54558.jpg',
-  'Oreki Houtarou': 'https://cdn.myanimelist.net/images/characters/9/212258.jpg',
-  'Miyamura Izumi': 'https://cdn.myanimelist.net/images/characters/5/435577.jpg',
-  'Nishikata': 'https://cdn.myanimelist.net/images/characters/13/395586.jpg',
-  'Yor Forger': 'https://cdn.myanimelist.net/images/characters/5/481066.jpg',
-  'Himeno': 'https://cdn.myanimelist.net/images/characters/5/471021.jpg',
-  'Kaguya Shinomiya': 'https://cdn.myanimelist.net/images/characters/5/409841.jpg',
-  'Yukino Yukinoshita': 'https://cdn.myanimelist.net/images/characters/10/245852.jpg',
-  'Shoyo Hinata': 'https://cdn.myanimelist.net/images/characters/5/262849.jpg',
-  'Tetsuya Kuroko': 'https://cdn.myanimelist.net/images/characters/8/223797.jpg',
-  'Tobio Kageyama': 'https://cdn.myanimelist.net/images/characters/7/262850.jpg',
-  'Seijuro Akashi': 'https://cdn.myanimelist.net/images/characters/5/223800.jpg',
-  'Yoichi Isagi': 'https://cdn.myanimelist.net/images/characters/5/476940.jpg',
-  'Ryota Kise': 'https://cdn.myanimelist.net/images/characters/12/223798.jpg',
-  'Ippo Makunouchi': 'https://cdn.myanimelist.net/images/characters/13/49966.jpg',
-  'Joe Yabuki': 'https://cdn.myanimelist.net/images/characters/12/57939.jpg',
-  'Ryoma Echizen': 'https://cdn.myanimelist.net/images/characters/4/24156.jpg',
-  'Eiichirou Maruo': 'https://cdn.myanimelist.net/images/characters/12/273615.jpg',
-  'Takenori Akagi': 'https://cdn.myanimelist.net/images/characters/10/40556.jpg',
-  'Ushijima Wakatoshi': 'https://cdn.myanimelist.net/images/characters/11/262851.jpg',
-  'Eijun Sawamura': 'https://cdn.myanimelist.net/images/characters/6/262852.jpg',
-  'Furuya Satoru': 'https://cdn.myanimelist.net/images/characters/4/270391.jpg',
-  'Light Yagami': 'https://cdn.myanimelist.net/images/characters/9/261784.jpg',
-  'Jotaro Kujo': 'https://cdn.myanimelist.net/images/characters/7/53397.jpg',
-  'Giorno Giovanna': 'https://cdn.myanimelist.net/images/characters/9/53398.jpg',
-  'Spike Spiegel': 'https://cdn.myanimelist.net/images/characters/8/57940.jpg',
-  'Vash the Stampede': 'https://cdn.myanimelist.net/images/characters/10/57941.jpg',
-  'Thorfinn': 'https://cdn.myanimelist.net/images/characters/11/400855.jpg',
-  'Senku Ishigami': 'https://cdn.myanimelist.net/images/characters/9/399792.jpg',
-  'Ayanokoji Kiyotaka': 'https://cdn.myanimelist.net/images/characters/14/357435.jpg',
-  'Rintaro Okabe': 'https://cdn.myanimelist.net/images/characters/5/121598.jpg',
-  'Makoto Naegi': 'https://cdn.myanimelist.net/images/characters/13/212259.jpg',
-  'Shinji Ikari': 'https://cdn.myanimelist.net/images/characters/5/23821.jpg',
-  'Homura Akemi': 'https://cdn.myanimelist.net/images/characters/11/180013.jpg',
-  'Usagi Tsukino': 'https://cdn.myanimelist.net/images/characters/9/57942.jpg',
-  'Nanoha Takamachi': 'https://cdn.myanimelist.net/images/characters/9/34901.jpg',
-  'Satsuki Kiryuin': 'https://cdn.myanimelist.net/images/characters/4/255961.jpg',
-  'Yato': 'https://cdn.myanimelist.net/images/characters/14/275273.jpg',
-  'Revy': 'https://cdn.myanimelist.net/images/characters/7/57943.jpg',
-  'Mahito': 'https://cdn.myanimelist.net/images/characters/4/448087.jpg',
-  'Hiei': 'https://cdn.myanimelist.net/images/characters/12/68955.jpg',
-  'Hanamichi Sakuragi': 'https://cdn.myanimelist.net/images/characters/7/40557.jpg',
-  'Noya Libero': 'https://cdn.myanimelist.net/images/characters/8/262853.jpg',
-  'Reo Mikage': 'https://cdn.myanimelist.net/images/characters/7/476941.jpg',
-  'Seishiro Nagi': 'https://cdn.myanimelist.net/images/characters/8/476942.jpg',
-  'Wataru Kuramochi': 'https://cdn.myanimelist.net/images/characters/5/270392.jpg',
-  'Yuri Katsuki': 'https://cdn.myanimelist.net/images/characters/9/335669.jpg',
-};
 
 function getRandomPair(genre) {
   const list = PAIRS[genre] || PAIRS.mix;
-  return { ...list[Math.floor(Math.random() * list.length)] };
+  const template = list[Math.floor(Math.random() * list.length)];
+  const undercoverWord = template.undercovers[Math.floor(Math.random() * template.undercovers.length)];
+  return {
+    civilian: template.civilian,
+    undercover: undercoverWord,
+    hint: template.hint,
+    civilianImg: CHARACTER_IMAGES[template.civilian] || null,
+    undercoverImg: CHARACTER_IMAGES[undercoverWord] || null,
+  };
 }
 
 // ═══════════════════════════════
@@ -842,10 +650,7 @@ io.on('connection', (socket) => {
     room.settings = s;
 
     const pair = getRandomPair(g);
-    const img1 = fetchCharImage(pair.civilian);
-    const img2 = fetchCharImage(pair.undercover);
-    pair.civilianImg = img1;
-    pair.undercoverImg = img2;
+    // Images already set in getRandomPair
 
     const players = Object.keys(room.players).filter(p => room.players[p].connected && !room.players[p].isSpectator);
     const shuffled = [...players].sort(() => Math.random() - .5);

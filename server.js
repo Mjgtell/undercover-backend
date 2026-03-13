@@ -695,7 +695,7 @@ io.on('connection', (socket) => {
     room.turnOrder = shuffled; // random order locked at game start — only alive non-spectator players
     room.currentTurnIndex = 0;  // whose turn it is within turnOrder
     room.votingUnlockedAtRound = 2; // vote only available from round 2
-    Object.keys(room.players).forEach(p => { room.players[p].ready = room.players[p].isSpectator; room.players[p].voted = false; });
+    Object.keys(room.players).forEach(p => { room.players[p].ready = room.players[p].isSpectator || room.players[p].isBot || false; room.players[p].voted = false; });
 
     shuffled.forEach(pName => { findSocket(pName, code)?.emit('your:assignment', assignments[pName]); });
 
@@ -877,7 +877,7 @@ io.on('connection', (socket) => {
     // Remove spectators from players, keep real players
     Object.keys(room.players).forEach(p => {
       if (room.players[p].isSpectator) { delete room.players[p]; }
-      else { room.players[p].ready = false; room.players[p].eliminated = false; room.players[p].voted = false; }
+      else { room.players[p].ready = room.players[p].isBot || false; room.players[p].eliminated = false; room.players[p].voted = false; }
     });
     room.spectators = [];
     broadcastRoom(code);

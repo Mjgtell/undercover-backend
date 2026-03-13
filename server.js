@@ -1,1193 +1,1504 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Undercover">
+<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Undercover%20Anim%C3%A9%22%2C%22short_name%22%3A%22Undercover%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230a0a0f%22%2C%22theme_color%22%3A%22%230a0a0f%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%20100'%3E%3Ctext%20y%3D'.9em'%20font-size%3D'90'%3E%F0%9F%95%B5%EF%B8%8F%3C%2Ftext%3E%3C%2Fsvg%3E%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+<title>UNDERCOVER — Animé</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Dots&family=Permanent+Marker&family=Noto+Sans+JP:wght@300;400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --ink:#0a0a0f; --ink2:#12121a; --ink3:#1a1a26;
+  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.14);
+  --red:#ff2d55; --red2:#c4002a;
+  --gold:#ffd60a; --gold2:#b59500;
+  --cyan:#00e5ff; --green:#00ff87; --purple:#bf5af2;
+  --muted:#4a4a6a; --text:#e8e8f0; --text2:#7070a0;
+  --fd:'Zen Dots',sans-serif;
+  --fm:'Share Tech Mono',monospace;
+  --fb:'Noto Sans JP',sans-serif;
+  --fmark:'Permanent Marker',cursive;
+}
+html{background:var(--ink);color:var(--text);font-family:var(--fb);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9998}
+.screen{display:none;min-height:100vh;position:relative;z-index:1}
+.screen.active{display:flex;flex-direction:column;align-items:center}
 
-// ═══════════════════════════════
-//  BOT ENGINE
-// ═══════════════════════════════
+/* ── HOME ── */
+#s-home{justify-content:center;padding:0 16px;overflow:visible;background:var(--ink)}
+.hbg{position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 75% 15%,rgba(255,45,85,.13) 0%,transparent 60%),radial-gradient(ellipse 50% 60% at 15% 80%,rgba(0,229,255,.07) 0%,transparent 60%),radial-gradient(ellipse 90% 40% at 50% 100%,rgba(255,214,10,.05) 0%,transparent 50%);pointer-events:none}
+.hgrid{position:absolute;inset:0;background-image:linear-gradient(90deg,var(--border) 1px,transparent 1px),linear-gradient(0deg,var(--border) 1px,transparent 1px);background-size:56px 56px;pointer-events:none;mask-image:radial-gradient(ellipse at center,rgba(0,0,0,.6) 0%,transparent 72%)}
+.hinner{position:relative;z-index:2;text-align:center;max-width:440px;width:100%;padding:54px 4px 40px}
+.hbadge{display:inline-flex;align-items:center;gap:8px;font-family:var(--fm);font-size:10px;letter-spacing:.3em;color:var(--cyan);border:1px solid rgba(0,229,255,.3);padding:5px 14px;margin-bottom:28px;animation:fd .6s ease both}
+.hbadge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:blink 1.5s infinite}
+.htitle{font-family:var(--fd);font-size:clamp(44px,11.5vw,88px);line-height:.92;letter-spacing:-.01em;animation:tIn .7s cubic-bezier(.16,1,.3,1) .1s both;padding:0 12px;overflow:visible;width:100%}
+.htitle .l1{display:block;color:var(--text)}
+.htitle .l2{display:block;background:linear-gradient(135deg,var(--red) 0%,var(--gold) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hsub{font-family:var(--fm);font-size:11px;letter-spacing:.35em;color:var(--muted);margin:14px 0 40px;animation:fu .6s ease .3s both}
+.hcards{display:grid;grid-template-columns:1fr 1fr;gap:12px;animation:fu .6s ease .4s both}
+.hcard{background:var(--ink2);border:1px solid var(--border2);padding:22px 18px;cursor:pointer;transition:all .2s cubic-bezier(.16,1,.3,1);text-align:left;position:relative;overflow:hidden}
+.hcard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),var(--gold));transform:scaleX(0);transform-origin:left;transition:transform .25s}
+.hcard:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.hcard:hover::after{transform:scaleX(1)}
+.hci{font-size:28px;margin-bottom:10px;display:block}
+.hct{font-family:var(--fd);font-size:17px;letter-spacing:.05em}
+.hcd{font-family:var(--fm);font-size:10px;color:var(--muted);margin-top:4px}
+.hfooter{margin-top:26px;display:flex;gap:10px;justify-content:center;animation:fu .6s ease .5s both}
 
-const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
-const BOT_NAMES = ['Kaito','Yuki','Ryu','Hana','Sora','Nami','Ren','Aoi'];
-const BOT_THINK_DELAY = 1500; // ms before bot "responds" — keeps socket alive
+/* ── TOPBAR ── */
+.topbar{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 20px;border-bottom:1px solid var(--border);background:rgba(10,10,15,.92);backdrop-filter:blur(20px);position:sticky;top:0;z-index:50}
+.tlogo{font-family:var(--fd);font-size:17px;letter-spacing:.05em}
+.tlogo span{background:linear-gradient(90deg,var(--red),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tcode{font-family:var(--fm);font-size:13px;color:var(--gold);border:1px solid rgba(255,214,10,.25);padding:4px 12px;letter-spacing:.2em}
 
-async function callClaude(systemPrompt, userPrompt) {
+/* ── WRAP ── */
+.wrap{width:100%;max-width:480px;padding:24px 20px}
+.stag{font-family:var(--fm);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--red);margin-bottom:7px}
+.ptitle{font-family:var(--fd);font-size:28px;letter-spacing:.04em;margin-bottom:22px;line-height:1.1}
+
+/* ── FIELDS ── */
+.field{margin-bottom:18px}
+.field label{display:block;font-family:var(--fm);font-size:9px;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;margin-bottom:7px}
+.field input,.field select{width:100%;background:var(--ink2);border:none;border-bottom:1px solid var(--border2);color:var(--text);font-family:var(--fb);font-size:15px;padding:11px 13px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.field input:focus,.field select:focus{border-bottom-color:var(--gold)}
+.field select option{background:var(--ink2)}
+.code-input{font-size:36px!important;letter-spacing:.35em!important;font-family:var(--fd)!important;text-transform:uppercase;text-align:center}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{background:transparent;border:1px solid var(--border2);color:var(--muted);font-family:var(--fm);font-size:10px;padding:6px 13px;cursor:pointer;transition:all .15s;letter-spacing:.08em}
+.chip.on,.chip:hover{border-color:var(--gold);color:var(--gold);background:rgba(255,214,10,.06)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.toggle-label{font-size:13px;font-weight:700}
+.toggle-sub{font-family:var(--fm);font-size:10px;color:var(--muted);margin-top:2px}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--ink3);border:1px solid var(--border2);border-radius:24px;cursor:pointer;transition:all .2s}
+.toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:all .2s}
+.toggle input:checked + .toggle-slider{background:rgba(255,214,10,.15);border-color:var(--gold)}
+.toggle input:checked + .toggle-slider::before{transform:translateX(20px);background:var(--gold)}
+
+/* ── BUTTONS ── */
+.btn{font-family:var(--fd);font-size:15px;letter-spacing:.1em;border:none;cursor:pointer;padding:13px 26px;transition:all .2s cubic-bezier(.16,1,.3,1);display:inline-flex;align-items:center;gap:8px;position:relative;overflow:hidden}
+.btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.08) 0%,transparent 50%);pointer-events:none}
+.btn-red{background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;box-shadow:0 4px 20px rgba(255,45,85,.3)}
+.btn-red:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,45,85,.45)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--ink);box-shadow:0 4px 20px rgba(255,214,10,.25)}
+.btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,214,10,.4)}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2);font-size:13px;padding:10px 18px}
+.btn-outline:hover{border-color:rgba(255,255,255,.3);color:var(--text)}
+.btn-green{background:linear-gradient(135deg,var(--green),#00cc6a);color:var(--ink);font-size:14px;padding:11px 20px;box-shadow:0 4px 18px rgba(0,255,135,.2)}
+.btn-green:hover{transform:translateY(-2px)}
+.btn-red-sm{background:var(--red);color:#fff;font-size:13px;padding:9px 16px}
+.btn:disabled{opacity:.3;pointer-events:none;transform:none!important;box-shadow:none!important}
+.btn-full{width:100%;justify-content:center}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+/* ── LOBBY ── */
+.code-box{background:var(--ink2);border:1px solid var(--border2);border-left:3px solid var(--gold);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.cb-label{font-family:var(--fm);font-size:9px;letter-spacing:.25em;color:var(--muted);margin-bottom:3px}
+.cb-val{font-family:var(--fd);font-size:40px;letter-spacing:.25em;color:var(--gold)}
+.prow{display:flex;align-items:center;gap:11px;padding:11px 14px;background:var(--ink2);border:1px solid var(--border);margin-bottom:7px;animation:sIn .3s cubic-bezier(.16,1,.3,1) both}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0}
+.sdot.off{background:var(--muted);box-shadow:none}
+.pname{font-size:14px;font-weight:700}
+.ptag{font-family:var(--fm);font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:.1em}
+.pkick{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px 8px;transition:color .2s}
+.pkick:hover{color:var(--red)}
+.info-box{border:1px solid var(--border);border-left:2px solid var(--cyan);background:rgba(0,229,255,.04);padding:11px 14px;font-family:var(--fm);font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:14px}
+
+/* ── SCORES ── */
+.scores-box{background:var(--ink2);border:1px solid var(--border);padding:14px 16px;margin-bottom:18px}
+.scores-title{font-family:var(--fm);font-size:9px;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;margin-bottom:10px}
+.score-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+.score-row:last-child{border:none}
+.score-name{font-size:13px;font-weight:700}
+.score-val{font-family:var(--fd);font-size:16px;color:var(--gold)}
+
+/* ── REVEAL ── */
+#s-reveal{background:var(--ink);justify-content:center;padding:30px 20px;overflow:hidden}
+#s-reveal::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 50%,rgba(255,45,85,.07) 0%,transparent 70%);pointer-events:none}
+.rv-label{font-family:var(--fm);font-size:10px;letter-spacing:.25em;color:var(--muted);margin-bottom:24px;text-transform:uppercase;animation:blink 2s infinite}
+.card-scene{perspective:1600px;width:260px;margin:0 auto}
+.card-3d{width:260px;height:380px;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.4,0,.2,1);cursor:pointer;position:relative}
+.card-3d.flipped{transform:rotateY(180deg)}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:12px;overflow:hidden}
+.c-back{background:linear-gradient(145deg,#1a1a2e,#0f0f1a);border:1px solid var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.c-back-pat{position:absolute;inset:0;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.018) 0px,rgba(255,255,255,.018) 1px,transparent 1px,transparent 14px),repeating-linear-gradient(-45deg,rgba(255,255,255,.018) 0px,rgba(255,255,255,.018) 1px,transparent 1px,transparent 14px)}
+.c-back-bdr{position:absolute;inset:8px;border:1px solid rgba(255,255,255,.055);border-radius:8px}
+.c-back-logo{font-family:var(--fd);font-size:50px;letter-spacing:.05em;position:relative;z-index:1;background:linear-gradient(135deg,var(--red),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.c-back-tap{font-family:var(--fm);font-size:10px;letter-spacing:.2em;color:var(--muted);position:relative;z-index:1;animation:blink 2s infinite}
+.c-front{transform:rotateY(180deg);background:linear-gradient(165deg,#f5f0e8,#ede5d0);border:1px solid rgba(0,0,0,.1);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;color:#1a1a1a}
+.cf-header{width:100%;background:linear-gradient(90deg,#1a1a2e,#0f0f1a);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.cf-role{font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:rgba(255,255,255,.5);text-transform:uppercase}
+.cf-num{font-family:var(--fd);font-size:11px;color:rgba(255,255,255,.2)}
+.cf-img{width:100%;height:195px;overflow:hidden;position:relative;background:linear-gradient(135deg,#2a2a3e,#1a1a28)}
+.cf-img img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;filter:contrast(1.03) saturate(.97)}
+.cf-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px}
+.cf-img-ov{position:absolute;bottom:0;left:0;right:0;height:48px;background:linear-gradient(transparent,#ede5d0)}
+.cf-body{flex:1;width:100%;padding:14px 16px 12px;display:flex;flex-direction:column;align-items:center;gap:7px}
+.cf-name{font-family:var(--fd);font-size:24px;letter-spacing:.02em;text-align:center;color:#1a1a2e;line-height:1.1}
+.cf-name.unk{font-family:var(--fb);font-style:italic;font-size:17px;color:#888;font-weight:300}
+.cf-div{width:26px;height:2px;background:linear-gradient(90deg,var(--red),var(--gold))}
+.cf-hint{font-family:var(--fm);font-size:10px;color:#666;text-align:center;line-height:1.6}
+.cf-stamp{width:100%;display:flex;align-items:center;justify-content:center;padding:6px 0 0;border-top:1px solid rgba(0,0,0,.08)}
+.cf-stamp-t{font-family:var(--fmark);font-size:13px;color:rgba(255,45,85,.22);transform:rotate(-3deg)}
+.rv-tap{font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:.2em;margin-top:20px;animation:blink 2s infinite}
+#rv-done{display:none;margin-top:20px}
+
+/* ── WAITING ── */
+#s-waiting{background:var(--ink);padding:50px 20px;align-items:center}
+.wait-icon{font-size:50px;animation:float 3s ease-in-out infinite;margin-bottom:14px}
+.wait-title{font-family:var(--fd);font-size:30px;letter-spacing:.06em;margin-bottom:5px}
+.wait-sub{font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:.15em;margin-bottom:28px}
+.rlist{width:100%;max-width:360px}
+.rrow{display:flex;align-items:center;gap:11px;padding:9px 13px;background:var(--ink2);border:1px solid var(--border);margin-bottom:6px}
+.rdot{width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:all .3s}
+.rdot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+.rname{font-size:14px;font-weight:700}
+.rstatus{font-family:var(--fm);font-size:10px;color:var(--muted);margin-left:auto;letter-spacing:.08em}
+.rstatus.done{color:var(--green)}
+
+/* ── PLAYING ── */
+.round-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 0;margin-bottom:12px;border-bottom:1px solid var(--border)}
+.round-num{font-family:var(--fd);font-size:13px;letter-spacing:.15em;color:var(--gold)}
+.alive-cnt{font-family:var(--fm);font-size:11px;color:var(--muted)}
+
+/* TIMER */
+.timer-bar{width:100%;height:4px;background:var(--ink3);margin-bottom:14px;overflow:hidden;border-radius:2px}
+.timer-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));width:100%;transform-origin:left;transition:width 1s linear}
+.timer-fill.urgent{animation:timerPulse .5s ease-in-out infinite}
+.timer-label{font-family:var(--fm);font-size:10px;color:var(--muted);text-align:right;margin-top:3px;margin-bottom:10px}
+
+/* MY WORD */
+.my-word{background:var(--ink2);border:1px solid var(--border);border-left:3px solid var(--gold);padding:11px 15px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.mw-l{font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:2px}
+.mw-v{font-family:var(--fd);font-size:20px;color:var(--gold);letter-spacing:.04em}
+
+/* PLAYERS */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:7px;margin-bottom:14px}
+.pcard{background:var(--ink2);border:1px solid var(--border);padding:9px 11px;display:flex;align-items:center;gap:9px;transition:all .3s}
+.pcard.dead{opacity:.22;filter:grayscale(1)}
+.pcard.voted-for{border-color:rgba(255,45,85,.4);background:rgba(255,45,85,.06)}
+.pc-em{font-size:19px;flex-shrink:0}
+.pc-n{font-size:12px;font-weight:700}
+.pc-s{font-family:var(--fm);font-size:9px;color:var(--muted);letter-spacing:.06em}
+.pc-votes{font-family:var(--fm);font-size:10px;color:var(--red);margin-left:auto}
+
+/* GAME BOXES */
+.gbox{background:var(--ink2);border:1px solid var(--border);padding:16px;margin-bottom:12px}
+.gbox-title{font-family:var(--fd);font-size:18px;letter-spacing:.06em;margin-bottom:8px}
+.pbadge{display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:9px;letter-spacing:.2em;padding:4px 11px;border:1px solid currentColor;margin-bottom:9px;text-transform:uppercase}
+.pbw{color:var(--green);border-color:rgba(0,255,135,.3)}
+.pbv{color:var(--red);border-color:rgba(255,45,85,.3)}
+
+/* WORD INPUT */
+.winput-row{display:flex;gap:8px;margin-bottom:10px}
+.winput-row input{flex:1;background:var(--ink3);border:1px solid var(--border2);color:var(--text);font-family:var(--fb);font-size:15px;padding:10px 13px;outline:none;transition:border-color .2s}
+.winput-row input:focus{border-color:var(--gold)}
+.winput-row input.blocked{border-color:var(--red);animation:shake .3s ease}
+.sub-notice{display:none;align-items:center;gap:8px;font-family:var(--fm);font-size:11px;color:var(--green);padding:7px 0;letter-spacing:.1em}
+.sub-notice.show{display:flex}
+
+/* WORDS LIST */
+.wlist{margin-top:4px}
+.wentry{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.wentry:last-child{border:none}
+.we-auth{font-family:var(--fm);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.we-word{font-weight:700;font-size:14px}
+.we-pend{font-style:italic;color:var(--muted);font-size:12px;font-family:var(--fm);animation:blink 1.5s infinite}
+
+.wentry.active-turn{background:rgba(255,214,10,.04);border-bottom-color:rgba(255,214,10,.2)}
+.wentry.active-turn .we-auth{color:var(--gold)}
+
+/* HISTORY */
+.hist-section{margin-top:8px}
+.hist-title{font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;padding:6px 0;border-top:1px solid var(--border)}
+.hist-row{display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.hist-round{font-family:var(--fm);font-size:9px;color:var(--muted);width:52px;flex-shrink:0}
+.hist-words{font-size:12px;color:var(--text2);flex:1}
+
+/* VOTE */
+.wsummary{background:var(--ink3);border:1px solid var(--border);padding:12px 14px;margin-bottom:12px}
+.ws-l{font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:7px}
+.vbtn{width:100%;background:var(--ink3);border:1px solid var(--border);color:var(--text);font-family:var(--fb);font-size:14px;padding:12px 15px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:11px;margin-bottom:6px;position:relative}
+.vbtn:hover:not(:disabled){border-color:rgba(255,45,85,.45);background:rgba(255,45,85,.07)}
+.vbtn.selected{border-color:var(--red);background:rgba(255,45,85,.12)}
+.vbtn.leading{border-color:rgba(255,45,85,.5)}
+.vbtn-votes{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--red)}
+.vbtn:disabled{opacity:.35;cursor:default}
+.host-tag{font-family:var(--fm);font-size:10px;color:var(--muted);border:1px solid var(--border);padding:8px 11px;margin-bottom:10px;line-height:1.6}
+.tie-box{background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.3);padding:14px;margin-bottom:12px;text-align:center}
+.tie-title{font-family:var(--fd);font-size:16px;color:var(--gold);margin-bottom:8px}
+
+/* MR WHITE */
+.mrw-box{background:var(--ink2);border:1px solid rgba(255,214,10,.2);padding:16px;margin-bottom:12px;display:none}
+.mrw-box.show{display:block}
+.mrw-t{font-family:var(--fd);font-size:18px;color:var(--gold);margin-bottom:5px}
+.mrw-s{font-family:var(--fm);font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6}
+
+/* ── ELIMINATION OVERLAY ── */
+.elim-overlay{position:fixed;inset:0;z-index:8000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s}
+.elim-overlay.show{opacity:1;pointer-events:all;animation:none}
+.elim-card{background:var(--ink2);border:1px solid var(--border2);padding:40px 32px;text-align:center;max-width:320px;width:90%;position:relative;animation:elimIn .5s cubic-bezier(.16,1,.3,1) both}
+.elim-skull{font-size:64px;margin-bottom:16px;animation:shake .4s ease .3s both}
+.elim-name{font-family:var(--fd);font-size:32px;color:var(--red);margin-bottom:8px;letter-spacing:.03em}
+.elim-sub{font-family:var(--fm);font-size:12px;color:var(--muted);letter-spacing:.12em}
+.elim-continue{display:none;margin-top:20px}
+
+/* ── RESULT ── */
+#s-result{background:var(--ink);justify-content:center;padding:40px 20px;overflow:hidden;text-align:center}
+.res-glow-win{position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 30%,rgba(255,214,10,.1) 0%,transparent 60%);pointer-events:none}
+.res-glow-lose{position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 30%,rgba(255,45,85,.1) 0%,transparent 60%);pointer-events:none}
+.res-inner{position:relative;z-index:2;width:100%;max-width:400px}
+.res-tag{font-family:var(--fm);font-size:9px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin-bottom:11px;animation:fd .4s ease both}
+.res-title{font-family:var(--fd);font-size:clamp(52px,15vw,86px);line-height:.88;letter-spacing:-.01em;animation:tIn .5s cubic-bezier(.16,1,.3,1) .1s both}
+.res-title.win{background:linear-gradient(135deg,var(--gold),#fff,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.res-title.lose{color:var(--red)}
+.res-div{width:34px;height:2px;background:linear-gradient(90deg,var(--red),var(--gold));margin:14px auto}
+.res-sub{font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:.1em;margin-bottom:4px}
+.res-card{background:var(--ink2);border:1px solid var(--border2);padding:18px;margin:18px 0;text-align:left;animation:fu .5s ease .2s both}
+.rcr{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.rcr:last-child{border:none}
+.rcl{font-family:var(--fm);font-size:9px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;padding-top:2px}
+.rcv{font-weight:700;text-align:right;max-width:58%}
+.cv{color:var(--gold)}.rv{color:var(--red)}
+.res-scores{background:var(--ink2);border:1px solid rgba(255,214,10,.2);padding:16px;margin-bottom:18px;text-align:left;animation:fu .5s ease .3s both}
+.rs-title{font-family:var(--fm);font-size:9px;letter-spacing:.25em;color:var(--gold);text-transform:uppercase;margin-bottom:12px}
+.rs-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)}
+.rs-row:last-child{border:none}
+.rs-name{font-size:13px;font-weight:700}
+.rs-score{font-family:var(--fd);font-size:16px;color:var(--gold)}
+.rs-role{font-family:var(--fm);font-size:9px;color:var(--muted);margin-top:2px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink2);border:1px solid var(--border2);color:var(--text);font-family:var(--fm);font-size:12px;letter-spacing:.1em;padding:11px 22px;z-index:9999;transition:transform .3s cubic-bezier(.16,1,.3,1);pointer-events:none;white-space:nowrap;max-width:88vw;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:rgba(0,255,135,.3);color:var(--green)}
+.toast.err{border-color:rgba(255,45,85,.3);color:var(--red)}
+.toast.warn{border-color:rgba(255,214,10,.3);color:var(--gold)}
+
+/* ── LOADING ── */
+.loverlay{display:none;position:fixed;inset:0;background:rgba(10,10,15,.96);z-index:9990;align-items:center;justify-content:center;flex-direction:column;gap:16px;backdrop-filter:blur(10px)}
+.loverlay.show{display:flex}
+.l-text{font-family:var(--fd);font-size:20px;letter-spacing:.2em;color:var(--red)}
+.l-bar{width:160px;height:1px;background:var(--border2);overflow:hidden}
+.l-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--gold));animation:slide 1.2s infinite ease-in-out}
+
+/* ── ANIMATIONS ── */
+@keyframes fd{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+@keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes tIn{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes sIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes elimIn{from{opacity:0;transform:scale(.88) translateY(20px)}to{opacity:1;transform:none}}
+@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes scoreUp{from{opacity:0;transform:translateY(10px) scale(.9)}to{opacity:1;transform:none}}
+
+/* ── WORD REVEAL CARD ── */
+.word-reveal-overlay{position:fixed;inset:0;z-index:7000;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.word-reveal-card{background:var(--ink2);border:1px solid var(--border2);border-top:3px solid var(--gold);padding:0;width:min(88vw,340px);box-shadow:0 24px 60px rgba(0,0,0,.7);transform:translateY(40px) scale(.94);opacity:0;transition:transform .35s cubic-bezier(.16,1,.3,1), opacity .3s ease;pointer-events:none}
+.word-reveal-card.show{transform:translateY(0) scale(1);opacity:1}
+.wrc-top{padding:12px 18px 0;display:flex;align-items:center;gap:10px}
+.wrc-emoji{font-size:22px}
+.wrc-author{font-family:var(--fm);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.wrc-name{font-size:14px;font-weight:700;color:var(--text)}
+.wrc-body{padding:14px 18px 18px;display:flex;align-items:center;gap:10px}
+.wrc-said{font-family:var(--fm);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.wrc-word{font-family:var(--fd);font-size:32px;letter-spacing:.04em;color:var(--gold);line-height:1}
+.wrc-bar{height:3px;background:linear-gradient(90deg,var(--red),var(--gold));animation:wrcBar .5s ease .1s both}
+@keyframes wrcBar{from{transform:scaleX(0);transform-origin:left}to{transform:scaleX(1);transform-origin:left}}
+
+@keyframes cdPulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.8}100%{transform:scale(1);opacity:1}}
+
+
+/* ══════════════════════════════════════════
+   VOCAL PANEL
+══════════════════════════════════════════ */
+#voice-btn{position:fixed;bottom:80px;right:18px;z-index:6000;width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:22px;transition:all .25s cubic-bezier(.16,1,.3,1);box-shadow:0 4px 20px rgba(0,0,0,.5)}
+#voice-btn.off{background:var(--ink3);border:1px solid var(--border2)}
+#voice-btn.on{background:linear-gradient(135deg,var(--cyan),#0099bb);box-shadow:0 4px 20px rgba(0,229,255,.4)}
+#voice-btn.speaking{animation:speakPulse .7s ease-in-out infinite}
+#voice-btn.visible{display:flex}
+@keyframes speakPulse{0%,100%{box-shadow:0 4px 20px rgba(0,229,255,.4)}50%{box-shadow:0 4px 36px rgba(0,229,255,.85),0 0 0 8px rgba(0,229,255,.12)}}
+
+#voice-panel{position:fixed;bottom:146px;right:14px;z-index:6001;width:min(92vw,320px);background:var(--ink2);border:1px solid var(--border2);border-top:2px solid var(--cyan);box-shadow:0 16px 48px rgba(0,0,0,.7);display:none;flex-direction:column;overflow:hidden;transform:translateY(16px) scale(.97);opacity:0;transition:transform .3s cubic-bezier(.16,1,.3,1),opacity .25s}
+#voice-panel.show{display:flex;transform:none;opacity:1}
+
+.vp-head{padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.vp-title{font-family:var(--fd);font-size:14px;letter-spacing:.08em;display:flex;align-items:center;gap:8px}
+.vp-dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.vp-dot.live{background:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:blink 1.5s infinite}
+.vp-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px;transition:color .15s}
+.vp-close:hover{color:var(--text)}
+
+.vp-device{padding:10px 14px;border-bottom:1px solid var(--border)}
+.vp-device label{font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px}
+.vp-device select{width:100%;background:var(--ink3);border:1px solid var(--border2);color:var(--text);font-family:var(--fb);font-size:12px;padding:7px 10px;outline:none;border-radius:0;-webkit-appearance:none;appearance:none;cursor:pointer}
+.vp-device select:focus{border-color:var(--cyan)}
+
+.vp-peers{padding:8px 0;max-height:240px;overflow-y:auto}
+.vp-peer{display:flex;align-items:center;gap:11px;padding:9px 16px;transition:background .15s}
+.vp-peer:hover{background:rgba(255,255,255,.03)}
+.vp-peer-em{font-size:18px;width:26px;text-align:center;flex-shrink:0;position:relative}
+.vp-speaking-ring{position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--cyan);opacity:0;transition:opacity .15s}
+.vp-speaking-ring.active{opacity:1;animation:speakRing .6s ease-in-out infinite}
+@keyframes speakRing{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.vp-peer-info{flex:1;min-width:0}
+.vp-peer-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vp-peer-status{font-family:var(--fm);font-size:9px;color:var(--muted);margin-top:1px;letter-spacing:.06em}
+.vp-peer-vol{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.vp-mute-btn{background:none;border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:13px;padding:3px 8px;border-radius:2px;transition:all .15s;line-height:1}
+.vp-mute-btn:hover{border-color:var(--red);color:var(--red)}
+.vp-mute-btn.muted{background:rgba(255,45,85,.1);border-color:rgba(255,45,85,.3);color:var(--red)}
+.vp-vol-slider{-webkit-appearance:none;appearance:none;width:64px;height:3px;background:var(--ink3);border-radius:2px;outline:none;cursor:pointer}
+.vp-vol-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:var(--cyan);cursor:pointer}
+.vp-vol-slider::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--cyan);border:none;cursor:pointer}
+
+.vp-me{display:flex;align-items:center;gap:11px;padding:9px 16px;background:rgba(0,229,255,.04);border-top:1px solid var(--border)}
+.vp-me-mic{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.vp-me-mic.on{background:linear-gradient(135deg,var(--cyan),#0099bb);box-shadow:0 2px 12px rgba(0,229,255,.35)}
+.vp-me-mic.off{background:var(--ink3);border:1px solid var(--border2)}
+.vp-me-mic.muted{background:rgba(255,45,85,.15);border:1px solid rgba(255,45,85,.3)}
+.vp-me-label{flex:1;font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:.08em}
+.vp-vu{width:48px;height:6px;background:var(--ink3);border-radius:3px;overflow:hidden;flex-shrink:0}
+.vp-vu-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--gold));border-radius:3px;transition:width .05s linear}
+
+.vp-join-row{padding:10px 14px;border-top:1px solid var(--border)}
+
+@media(max-width:380px){.hcards{grid-template-columns:1fr}.pgrid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- WORD REVEAL CARD -->
+<div class="word-reveal-overlay" id="word-reveal-overlay">
+  <div class="word-reveal-card" id="word-reveal-card">
+    <div class="wrc-bar"></div>
+    <div class="wrc-top">
+      <span class="wrc-emoji" id="wrc-emoji">🐉</span>
+      <div><div class="wrc-author">a dit</div><div class="wrc-name" id="wrc-name">Joueur</div></div>
+    </div>
+    <div class="wrc-body">
+      <div>
+        <div class="wrc-said">son mot</div>
+        <div class="wrc-word" id="wrc-word">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loverlay" id="loading"><div class="l-text" id="l-text">CHARGEMENT</div><div class="l-bar"><div class="l-fill"></div></div></div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ELIMINATION OVERLAY -->
+<div class="elim-overlay" id="elim-overlay">
+  <div class="elim-card">
+    <div class="elim-skull">💀</div>
+    <div class="elim-name" id="elim-name">Joueur</div>
+    <div class="elim-sub" id="elim-sub">a été éliminé</div>
+    <div class="elim-continue" id="elim-continue">
+      <button class="btn btn-outline" onclick="document.getElementById('elim-overlay').classList.remove('show')">Continuer →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ HOME ════ -->
+<div id="s-home" class="screen active">
+  <div class="hbg"></div><div class="hgrid"></div>
+  <div class="hinner">
+    <div class="hbadge">● ONLINE MULTIPLAYER</div>
+    <h1 class="htitle"><span class="l1">UNDER</span><span class="l2">COVER</span></h1>
+    <p class="hsub">— ANIMÉ EDITION —</p>
+    <div class="hcards">
+      <div class="hcard" onclick="showScreen('s-create')"><span class="hci">🎮</span><div class="hct">CRÉER</div><div class="hcd">Nouvelle partie</div></div>
+      <div class="hcard" onclick="showScreen('s-join')"><span class="hci">🔗</span><div class="hct">REJOINDRE</div><div class="hcd">Code de salle</div></div>
+    </div>
+    <div class="hfooter">
+      <button class="btn btn-outline" onclick="showRules()">📜 Règles</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ CREATE ════ -->
+<div id="s-create" class="screen">
+  <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div><button class="btn btn-outline" onclick="showScreen('s-home')">← Retour</button></div>
+  <div class="wrap">
+    <div class="stag">Hôte</div>
+    <div class="ptitle">CRÉER UNE SALLE</div>
+    <div class="field"><label>Ton prénom</label><input type="text" id="c-name" placeholder="Ton prénom…" maxlength="20" autocomplete="off"/></div>
+    <div class="field"><label>Genre d'animé</label>
+      <div class="chips" id="chips">
+        <button class="chip on" data-g="shonen">Shōnen</button>
+        <button class="chip" data-g="fantasy">Fantasy</button>
+        <button class="chip" data-g="action">Action</button>
+        <button class="chip" data-g="romance">Romance</button>
+        <button class="chip" data-g="sports">Sports</button>
+        <button class="chip" data-g="mix">Mix total</button>
+      </div>
+    </div>
+    <div style="margin-top:18px;margin-bottom:6px">
+      <div class="stag">Options</div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Mr. White</div><div class="toggle-sub">Rôle caché (5+ joueurs)</div></div>
+        <label class="toggle"><input type="checkbox" id="opt-mrw" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Double Undercover</div><div class="toggle-sub">2 imposteurs (6+ joueurs)</div></div>
+        <label class="toggle"><input type="checkbox" id="opt-uc2"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Timer (45s / 60s)</div><div class="toggle-sub">Pression sur chaque tour</div></div>
+        <label class="toggle"><input type="checkbox" id="opt-timer" checked><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+    <button class="btn btn-red btn-full" style="margin-top:18px" onclick="createRoom()">CRÉER LA SALLE →</button>
+  </div>
+</div>
+
+<!-- ════ JOIN ════ -->
+<div id="s-join" class="screen">
+  <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div><button class="btn btn-outline" onclick="showScreen('s-home')">← Retour</button></div>
+  <div class="wrap">
+    <div class="stag">Joueur</div>
+    <div class="ptitle">REJOINDRE</div>
+    <div class="field"><label>Ton prénom</label><input type="text" id="j-name" placeholder="Ton prénom…" maxlength="20" autocomplete="off"/></div>
+    <div class="field"><label>Code de la salle</label><input type="text" class="code-input" id="j-code" placeholder="AB7K" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()"/></div>
+    <button class="btn btn-red btn-full" onclick="joinRoom()">REJOINDRE →</button>
+  </div>
+</div>
+
+<!-- ════ LOBBY ════ -->
+<div id="s-lobby" class="screen">
+  <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div><div class="tcode" id="l-codepill">----</div></div>
+  <div class="wrap">
+    <div class="stag" id="l-tag">Salle d'attente</div>
+    <div class="ptitle" id="l-title">EN ATTENTE…</div>
+    <div class="code-box"><div><div class="cb-label">Code à partager</div><div class="cb-val" id="l-code">----</div></div><button class="btn btn-outline" onclick="copyCode()">COPIER</button></div>
+    <div id="scores-section" style="display:none">
+      <div class="scores-box"><div class="scores-title">🏆 SCORES</div><div id="scores-list"></div></div>
+    </div>
+    <div class="stag" style="margin-bottom:9px">Joueurs</div>
+    <div id="l-players"></div>
+    <div id="l-host-ctrl" style="display:none;margin-top:16px">
+      <div class="info-box">Minimum 3 joueurs pour lancer.</div>
+      <button class="btn btn-outline btn-full" id="l-add-bot" onclick="addBot()" style="margin-bottom:8px;font-size:13px">🤖 AJOUTER UN BOT IA</button>
+      <button class="btn btn-gold btn-full" id="l-start" onclick="hostStart()" disabled>LANCER →</button>
+    </div>
+    <div id="l-guest-wait" style="display:none;margin-top:16px;font-family:var(--fm);font-size:12px;color:var(--muted);text-align:center;letter-spacing:.1em">En attente que l'hôte lance…</div>
+    <div class="btn-row" style="margin-top:20px"><button class="btn btn-outline" onclick="leaveRoom()">Quitter</button></div>
+  </div>
+</div>
+
+<!-- ════ REVEAL ════ -->
+<div id="s-reveal" class="screen">
+  <div class="rv-label" id="rv-name-label">JOUEUR</div>
+  <div class="card-scene" onclick="flipCard()">
+    <div class="card-3d" id="the-card">
+      <div class="card-face c-back"><div class="c-back-pat"></div><div class="c-back-bdr"></div><div class="c-back-logo">UC</div><div class="c-back-tap">APPUIE POUR VOIR</div></div>
+      <div class="card-face c-front" id="card-front">
+        <div class="cf-header"><span class="cf-role">Ta carte</span><span class="cf-num">#UC</span></div>
+        <div class="cf-img" id="cf-img"><div class="cf-img-ph">🎭</div></div>
+        <div class="cf-img-ov"></div>
+        <div class="cf-body"><div class="cf-name" id="cf-name">—</div><div class="cf-div"></div><div class="cf-hint" id="cf-hint">Décris ce perso sans le nommer !</div><div class="cf-stamp"><span class="cf-stamp-t">UNDERCOVER</span></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="rv-tap" id="rv-tap">[ APPUIE SUR LA CARTE ]</div>
+  <div id="rv-done"><button class="btn btn-red" onclick="doneReading()">J'AI LU → CACHER</button></div>
+</div>
+
+<!-- ════ WAITING ════ -->
+<div id="s-waiting" class="screen">
+  <div class="wait-icon">⏳</div>
+  <div class="wait-title">EN ATTENTE</div>
+  <div class="wait-sub">Tous les joueurs lisent leur carte…</div>
+  <div class="rlist" id="rlist"></div>
+</div>
+
+<!-- ════ PLAYING ════ -->
+<div id="s-playing" class="screen">
+  <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div><div class="tcode" id="g-codepill">----</div></div>
+  <div class="wrap">
+    <div class="round-hdr"><span class="round-num">TOUR <span id="g-round">1</span></span><span class="alive-cnt"><span id="g-alive">?</span> en vie</span></div>
+    <!-- TURN ORDER BANNER -->
+    <div id="turn-order-bar" style="display:none;background:var(--ink2);border:1px solid var(--border);border-left:3px solid var(--cyan);padding:10px 14px;margin-bottom:12px;font-family:var(--fm);font-size:11px;color:var(--muted);line-height:1.8">
+      <div style="font-size:9px;letter-spacing:.2em;color:var(--cyan);text-transform:uppercase;margin-bottom:4px">Ordre de passage</div>
+      <div id="turn-order-list" style="display:flex;flex-wrap:wrap;gap:6px 4px"></div>
+    </div>
+    <div id="timer-wrap" style="display:none"><div class="timer-bar"><div class="timer-fill" id="timer-fill"></div></div><div class="timer-label" id="timer-label"></div></div>
+    <div class="my-word" id="my-word" style="display:none"><div><div class="mw-l">Ton personnage</div><div class="mw-v" id="mw-v">—</div></div><div id="mw-role" style="font-size:20px"></div></div>
+    <div class="pgrid" id="pgrid"></div>
+
+    <!-- WORDS BOX -->
+    <div class="gbox" id="words-box">
+      <div class="pbadge pbw">Phase 1 — Description</div>
+      <div class="gbox-title">DÉCRIS TON PERSO</div>
+      <div class="info-box" style="margin-bottom:12px">1 mot ou indice, sans jamais dire le nom. Si tu le dis → éliminé automatiquement !</div>
+      <div class="winput-row" id="winput-row">
+        <input type="text" id="word-input" placeholder="Ton indice…" maxlength="40" onkeydown="if(event.key==='Enter')submitWord()" autocomplete="off"/>
+        <button class="btn btn-green" onclick="submitWord()">OK</button>
+      </div>
+      <div class="sub-notice" id="sub-notice"><span>✓</span> Envoyé — en attente des autres…</div>
+      <div class="wlist" id="words-list"></div>
+      <div class="hist-section" id="hist-section"></div>
+      <!-- ACCUSATION -->
+      <div id="accuse-section" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:var(--red);text-transform:uppercase;margin-bottom:8px">👉 Pointer du doigt</div>
+        <div id="accuse-btns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+    </div>
+
+    <!-- VOTE BOX -->
+    <div class="gbox" id="vote-box" style="display:none">
+      <div class="pbadge pbv">Phase 2 — Vote</div>
+      <div class="gbox-title">ÉLIMINATION</div>
+      <div class="wsummary"><div class="ws-l">Mots du tour</div><div id="ws-content"></div></div>
+      <div class="tie-box" id="tie-box" style="display:none"><div class="tie-title">⚡ ÉGALITÉ</div><div id="tie-content"></div></div>
+      <div class="host-tag" id="host-note"></div>
+      <div id="vbtns"></div>
+    </div>
+
+    <!-- MR WHITE -->
+    <div class="mrw-box" id="mrw-box">
+      <div class="mrw-t">🎯 MR. WHITE</div>
+      <div class="mrw-s">L'Undercover est éliminé. Devine le personnage civil pour gagner !</div>
+      <div class="winput-row"><input type="text" id="mrw-input" placeholder="Nom du perso…" maxlength="40" onkeydown="if(event.key==='Enter')submitMrwGuess()"/><button class="btn btn-gold" onclick="submitMrwGuess()">DEVINER</button></div>
+    </div>
+
+    <div class="btn-row"><button class="btn btn-outline" onclick="leaveRoom()">Quitter</button></div>
+  </div>
+</div>
+
+<!-- ════ SPECTATOR ════ -->
+<div id="s-spectator" class="screen">
+  <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div><div class="tcode" id="sp-codepill">----</div></div>
+  <div class="wrap">
+    <div class="stag">Mode observateur</div>
+    <div class="ptitle">👁 EN OBSERVATION</div>
+    <div class="info-box">Tu observes la partie sans y participer. Les autres joueurs ne savent pas que tu regardes.</div>
+    <div class="gbox" id="sp-words-box" style="display:none">
+      <div class="pbadge pbw">Mots du tour en cours</div>
+      <div class="wlist" id="sp-words-list"></div>
+    </div>
+    <div class="pgrid" id="sp-pgrid"></div>
+    <div class="gbox" id="sp-hist"><div class="hist-section" id="sp-hist-content"></div></div>
+    <div class="btn-row"><button class="btn btn-outline" onclick="leaveRoom()">Quitter</button></div>
+  </div>
+</div>
+
+<!-- ════ SPECTATOR OFFER ════ -->
+<div id="s-specoffer" class="screen">
+  <div class="topbar"><div class="tlogo">UNDER<span>COVER</span></div></div>
+  <div class="wrap" style="text-align:center;padding-top:60px">
+    <div style="font-size:52px;margin-bottom:20px">🎮</div>
+    <div class="stag">Partie en cours</div>
+    <div class="ptitle">REJOINDRE EN SPECTATEUR ?</div>
+    <div class="info-box" style="text-align:left;margin-bottom:24px">Une partie est déjà en cours dans cette salle. Tu peux observer sans participer — la partie continue normalement.</div>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn btn-red" id="spec-yes-btn">OBSERVER 👁</button>
+      <button class="btn btn-outline" onclick="showScreen('s-join')">← Retour</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════ VOICE PANEL ════ -->
+<button id="voice-btn" class="off" title="Vocal" onclick="toggleVoicePanel()">🎙️</button>
+
+<div id="voice-panel">
+  <div class="vp-head">
+    <div class="vp-title"><div class="vp-dot" id="vp-dot"></div>VOCAL</div>
+    <button class="vp-close" onclick="toggleVoicePanel()">✕</button>
+  </div>
+  <div class="vp-device">
+    <label>Microphone</label>
+    <select id="vp-mic-select" onchange="changeMic(this.value)"><option value="">— sélectionner —</option></select>
+  </div>
+  <div class="vp-peers" id="vp-peers"></div>
+  <div class="vp-me">
+    <button class="vp-me-mic off" id="vp-me-mic" onclick="toggleMyMic()" title="Muet / Son">🎙️</button>
+    <div class="vp-me-label" id="vp-me-label">Micro désactivé</div>
+    <div class="vp-vu"><div class="vp-vu-fill" id="vp-vu-fill"></div></div>
+  </div>
+  <div class="vp-join-row">
+    <button class="btn btn-outline btn-full" id="vp-join-btn" onclick="joinVoice()" style="font-size:12px;padding:9px">🎙 REJOINDRE LE VOCAL</button>
+  </div>
+</div>
+
+<!-- ════ COUNTDOWN ════ -->
+<div id="s-countdown" class="screen" style="justify-content:center;background:var(--ink)">
+  <div style="text-align:center;position:relative;z-index:2">
+    <div style="font-family:var(--fd);font-size:11px;letter-spacing:.3em;color:var(--muted);margin-bottom:20px;font-family:var(--fm)">DÉBUT DE LA PARTIE</div>
+    <div id="cd-number" style="font-family:var(--fd);font-size:clamp(120px,30vw,200px);line-height:1;background:linear-gradient(135deg,var(--red),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:cdPulse .9s ease-in-out infinite">3</div>
+    <div style="font-family:var(--fm);font-size:12px;letter-spacing:.2em;color:var(--muted);margin-top:16px;animation:blink 1s infinite">PRÉPARE-TOI…</div>
+  </div>
+</div>
+
+<!-- ════ RESULT ════ -->
+<div id="s-result" class="screen">
+  <div id="res-glow"></div>
+  <div class="res-inner">
+    <div class="res-tag">RÉSULTAT</div>
+    <div class="res-title" id="res-title">FIN</div>
+    <div class="res-div"></div>
+    <div class="res-sub" id="res-sub"></div>
+    <div class="res-card" id="res-details"></div>
+    <div class="res-scores" id="res-scores" style="display:none"><div class="rs-title">🏆 TABLEAU DES SCORES</div><div id="rs-rows"></div></div>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn btn-red" id="res-replay" style="display:none" onclick="hostReset()">REJOUER →</button>
+      <button class="btn btn-outline" onclick="shareScore()">📤 Partager</button>
+      <button class="btn btn-outline" onclick="leaveRoom()">MENU</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SERVER_URL = 'https://undercover-backend-4st4.onrender.com';
+
+// ── ANTI-SLEEP PING ──
+setInterval(() => fetch(SERVER_URL + '/ping').catch(()=>{}), 8*60*1000);
+
+// ── AUDIO ──
+const AC = window.AudioContext ? new AudioContext() : null;
+function beep(f,d,v=.15,t='sine'){if(!AC)return;try{const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);o.frequency.value=f;o.type=t;g.gain.setValueAtTime(v,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.start();o.stop(AC.currentTime+d);}catch{}}
+function soundOk(){beep(880,.12);setTimeout(()=>beep(1100,.12),100);}
+function soundError(){beep(220,.3,.2,'sawtooth');}
+function soundElim(){beep(440,.1);setTimeout(()=>beep(330,.1),120);setTimeout(()=>beep(220,.4),240);}
+function soundTimer(){beep(1200,.06,.08);}
+function soundVictory(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.3,.15),i*120));}
+function soundCountdown(n){beep(n>0?660:880,n>0?.15:.4,.2);}
+function soundAccuse(){beep(550,.08);setTimeout(()=>beep(440,.15),80);}
+
+// ── VIBRATION ──
+function vibe(p){if(navigator.vibrate)navigator.vibrate(p);}
+function vibeElim(){vibe([80,40,80,40,200]);}
+function vibeOk(){vibe(40);}
+function vibeError(){vibe([100,50,100]);}
+
+// ── STATE ──
+let socket, _lastRoom=null, _myVote=null, _isSpectator=false, _pendingSpec=null, timerInterval=null, _currentTurnPlayer=null;
+let S={name:null,code:null,isHost:false,myAssignment:null,cardFlipped:false,genre:'shonen',subPhase:'words'};
+const EMOJIS=['🐉','⚔️','🌊','🔥','⚡','🌙','🎯','🗡️','🛡️','✨','👁️','🐺','🌸','💫','🦊','🗿','🌀','🦋','🔮','🎪'];
+
+// ── SOCKET ──
+function initSocket(){
+  if(socket?.connected)return;
+  socket=io(SERVER_URL,{transports:['websocket','polling']});
+  socket.on('connect',()=>{
+    const s=sessionStorage.getItem('uc');
+    // Only reconnect if we have a session AND we're not currently in a fresh join flow
+    if(s && S.code){
+      try{socket.emit('room:reconnect',JSON.parse(s));}catch{}
+    } else if(s && !S.name){
+      // Page reload — try to reconnect
+      try{socket.emit('room:reconnect',JSON.parse(s));}catch{}
+    }
+  });
+  socket.on('disconnect',()=>toast('Connexion perdue…','err'));
+  socket.on('error', msg => {
+    soundError(); vibeError(); setLoading(false);
+    if(msg && msg.includes('Session introuvable')) {
+      sessionStorage.removeItem('uc');
+      resetState();
+      showScreen('s-home');
+      setTimeout(()=>toast('⚠️ Session expirée, relance une partie !','err'),300);
+    } else {
+      toast(msg||'Erreur','err');
+    }
+  });
+
+  socket.on('loading',on=>setLoading(on));
+  socket.on('room:joined',({code,name,isHost,isSpectator})=>{S.name=name;S.code=code;S.isHost=isHost;_isSpectator=isSpectator||false;sessionStorage.setItem('uc',JSON.stringify({name,code}));setLoading(false);});
+  socket.on('room:promoted',()=>{S.isHost=true;toast("Tu es maintenant l'hôte !",'ok');});
+  socket.on('room:update',room=>handleRoomUpdate(room));
+  socket.on('spectator:offer',({code,name})=>{_pendingSpec={code,name};setLoading(false);document.getElementById('spec-yes-btn').onclick=()=>joinAsSpectator();showScreen('s-specoffer');});
+  socket.on('spectator:joined',({message})=>{toast(message,'ok');showScreen('s-spectator');document.getElementById('sp-codepill').textContent=S.code;});
+  socket.on('your:assignment',a=>{S.myAssignment=a;buildCardFront(a);});
+  socket.on('turn:next',({player})=>{
+    _currentTurnPlayer = player;
+    const isMe = player === S.name;
+    if(isMe){
+      toast('🎯 C\'est ton tour !', 'ok');
+      soundOk(); vibe([60,30,60]);
+    } else {
+      toast(`⏳ Tour de ${player}…`);
+    }
+    if(_lastRoom) renderPlaying(_lastRoom);
+  });
+  socket.on('words:all_submitted',({round})=>{
+    clearClientTimer();
+    toast(`Tour ${round} — mots soumis !`,'ok');soundOk();vibeOk();
+  });
+  socket.on('mrwhite:your_turn',()=>{document.getElementById('mrw-box').classList.add('show');toast("À toi Mr. White — devine le perso civil !",'warn');vibe([100,50,100,50,100]);});
+  socket.on('player:eliminated',({name})=>{showElimOverlay(name);soundElim();vibeElim();});
+  socket.on('player:accused',({accuser,target})=>{
+    toast(`👉 ${accuser} pointe ${target} du doigt !`,'warn');soundAccuse();vibeOk();
+    setTimeout(()=>{document.querySelectorAll('.pcard').forEach(el=>{if(el.querySelector('.pc-n')?.textContent===target){el.style.borderColor='var(--red)';el.style.background='rgba(255,45,85,.12)';setTimeout(()=>{el.style.borderColor='';el.style.background='';},2000);}});},100);
+  });
+  socket.on('vote:tie',({tied,tally})=>{
+    const tb=document.getElementById('tie-box'),tc=document.getElementById('tie-content');
+    tb.style.display='block';
+    if(S.isHost){tc.innerHTML=`<p style="font-family:var(--fm);font-size:11px;color:var(--muted);margin-bottom:10px">Égalité — tu décides :</p>`+tied.map(n=>`<button class="btn btn-red-sm" style="margin:4px" onclick="socket.emit('vote:tiebreak',{target:'${n}'})">Éliminer ${n}</button>`).join('');}
+    else{tc.innerHTML=`<p style="font-family:var(--fm);font-size:11px;color:var(--muted)">Égalité entre : ${tied.join(', ')}. L'hôte décide…</p>`;}
+    vibe([60,30,60]);
+  });
+  socket.on('vote:restore',({target})=>{_myVote=target;if(_lastRoom)renderPlaying(_lastRoom);});
+  socket.on('word:revealed',({player, word})=>{
+    showWordReveal(player, word);
+  });
+  socket.on('word:blocked',({word})=>{soundError();vibeError();const inp=document.getElementById('word-input');inp.classList.add('blocked');setTimeout(()=>inp.classList.remove('blocked'),600);toast(`🚫 "${word}" contient ton perso — tu es éliminé !`,'err');});
+  socket.on('game:countdown',n=>{
+    if(n>0){showScreen('s-countdown');const el=document.getElementById('cd-number');el.textContent=n;el.style.animation='none';void el.offsetWidth;el.style.animation='cdPulse .9s ease-in-out infinite';}
+    soundCountdown(n);vibe(n>0?60:200);
+  });
+  socket.on('kicked',msg=>{toast(msg,'err');soundError();vibeError();sessionStorage.removeItem('uc');resetState();setTimeout(()=>showScreen('s-home'),1600);});
+  socket.on('toast',msg=>toast(msg));
+  // WebRTC voice signaling
+  voiceBindSocket();
+}
+
+// ── ROOM UPDATE ──
+function handleRoomUpdate(room){
+  _lastRoom=room;
+  const cur=document.querySelector('.screen.active')?.id;
+  const gameScreens=['s-lobby','s-reveal','s-waiting','s-playing','s-spectator','s-result'];
+  if(gameScreens.includes(cur)) voiceShowBtn(true);
+  if(_isSpectator){renderSpectator(room);if(cur!=='s-spectator')showScreen('s-spectator');return;}
+  if(room.phase==='lobby'){renderLobby(room);if(cur!=='s-lobby')showScreen('s-lobby');clearClientTimer();}
+  if(room.phase==='reveal'){
+    clearClientTimer();
+    if(cur!=='s-reveal'&&cur!=='s-waiting'){S.cardFlipped=false;S.subPhase='words';_myVote=null;document.getElementById('the-card').classList.remove('flipped');document.getElementById('rv-done').style.display='none';document.getElementById('rv-tap').style.display='block';document.getElementById('rv-name-label').textContent=(S.name||'').toUpperCase();showScreen('s-reveal');}
+    if(cur==='s-waiting')renderReadyList(room.players);
+  }
+  if(room.phase==='playing'){
+    const wasInPlay = cur==='s-playing';
+    if(cur==='s-waiting'||cur==='s-reveal'||cur==='s-countdown'){S.subPhase='words';_myVote=null;document.getElementById('sub-notice').classList.remove('show');document.getElementById('winput-row').style.display='flex';document.getElementById('word-input').value='';document.getElementById('tie-box').style.display='none';document.getElementById('mrw-box').classList.remove('show');showScreen('s-playing');document.getElementById('g-codepill').textContent=S.code;}
+    // Detect round change while already playing (e.g. round 1→2 auto-advance)
+    if(wasInPlay && _lastRoom && room.round !== _lastRoom.round){
+      _myVote=null; _currentTurnPlayer=null;
+      document.getElementById('sub-notice').classList.remove('show');
+      document.getElementById('winput-row').style.display='flex';
+      document.getElementById('word-input').value='';
+      document.getElementById('tie-box').style.display='none';
+    }
+    // Sync turn player from room state (for reconnects)
+    if(room.turnOrder && room.currentTurnIndex !== undefined){
+      const alive = room.turnOrder.filter(n => room.players[n] && !room.players[n].eliminated && room.players[n].connected);
+      _currentTurnPlayer = alive[room.currentTurnIndex % Math.max(alive.length,1)] || null;
+    }
+    if(room.subPhase)S.subPhase=room.subPhase;
+    renderPlaying(room);
+    if(room.timerEnd)startClientTimer(room.timerEnd,room.timerPhase);
+  }
+  if(room.phase==='result'){clearClientTimer();showScreen('s-result');renderResult(room);}
+  if(Voice.panelOpen) voiceRenderPanel();
+}
+
+// ── SPECTATOR ──
+function renderSpectator(room){
+  const players=room.players||{};
+  const names=Object.keys(players).filter(n=>!players[n].isSpectator);
+  const alive=names.filter(n=>!players[n].eliminated);
+  document.getElementById('sp-pgrid').innerHTML=names.map((n,i)=>`<div class="pcard ${players[n].eliminated?'dead':''}"><span class="pc-em">${EMOJIS[i%EMOJIS.length]}</span><div><div class="pc-n">${n}</div><div class="pc-s">${players[n].eliminated?'☠ éliminé':'en vie'}</div></div></div>`).join('');
+  const rk=`round${room.round}`;const wordsNow=room.words?.[rk]||{};
+  const wb=document.getElementById('sp-words-box');
+  if(Object.keys(wordsNow).length>0){wb.style.display='block';document.getElementById('sp-words-list').innerHTML=alive.map(n=>`<div class="wentry"><span class="we-auth">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}</span>${wordsNow[n]?`<span class="we-word">${wordsNow[n]}</span>`:`<span class="we-pend">écrit…</span>`}</div>`).join('');}
+  else{wb.style.display='none';}
+  let hist='';for(let r=1;r<room.round;r++){const rw=room.words?.[`round${r}`]||{};const parts=names.filter(n=>rw[n]).map(n=>`${n}: <b>${rw[n]}</b>`).join(' · ');if(parts)hist+=`<div class="hist-row"><span class="hist-round">Tour ${r}</span><span class="hist-words">${parts}</span></div>`;}
+  document.getElementById('sp-hist-content').innerHTML=hist?`<div class="hist-title">Historique</div>${hist}`:'';
+}
+
+// ── LOBBY ──
+function renderLobby(room){
+  document.getElementById('l-codepill').textContent=room.code;
+  document.getElementById('l-code').textContent=room.code;
+  document.getElementById('l-title').textContent=S.isHost?'TA SALLE':'CONNECTÉ !';
+  document.getElementById('l-host-ctrl').style.display=S.isHost?'block':'none';
+  document.getElementById('l-guest-wait').style.display=S.isHost?'none':'block';
+  const names=Object.keys(room.players).filter(n=>!room.players[n].isSpectator);
+  document.getElementById('l-players').innerHTML=names.map((n,i)=>{
+    const p=room.players[n];const isBot=p.isBot||false;
+    return `<div class="prow"><div class="sdot ${p.connected?'':'off'}"></div><div><div class="pname">${EMOJIS[i%EMOJIS.length]} ${n}${isBot?' <span style="font-family:var(--fm);font-size:9px;color:var(--cyan);letter-spacing:.1em;border:1px solid rgba(0,229,255,.3);padding:1px 6px;margin-left:4px">BOT IA</span>':''}</div><div class="ptag">${n===room.host?'★ HÔTE':isBot?'intelligence artificielle':p.connected?'connecté':'déconnecté'}</div></div>${S.isHost&&n!==S.name&&!isBot?`<button class="pkick" onclick="socket.emit('player:kick',{target:'${n}'})">✕</button>`:''}${S.isHost&&isBot?`<button class="pkick" onclick="removeBot('${n}')" title="Retirer le bot" style="color:var(--cyan)">✕</button>`:''}</div>`;
+  }).join('');
+  if(S.isHost)document.getElementById('l-start').disabled=names.filter(n=>room.players[n].connected).length<3;
+  const scores=room.scores||{};const hasScores=names.some(n=>(scores[n]?.wins||0)>0);
+  const ss=document.getElementById('scores-section');
+  if(hasScores){ss.style.display='block';const sorted=[...names].sort((a,b)=>(scores[b]?.wins||0)-(scores[a]?.wins||0));document.getElementById('scores-list').innerHTML=sorted.map(n=>`<div class="score-row"><span class="score-name">${n}</span><span class="score-val">${scores[n]?.wins||0} pt${(scores[n]?.wins||0)>1?'s':''}</span></div>`).join('');}
+  else{ss.style.display='none';}
+}
+
+// ── CREATE/JOIN/LEAVE ──
+function createRoom(){
+  const name=document.getElementById('c-name').value.trim();
+  if(!name){toast('Entre ton prénom !','err');return;}
+  S.genre=document.querySelector('.chip.on')?.dataset.g||'shonen';
+  initSocket();setLoading(true,'CRÉATION…');
+  socket.emit('room:create',{name,genre:S.genre,settings:{mrWhite:document.getElementById('opt-mrw').checked,doubleUndercover:document.getElementById('opt-uc2').checked,wordTimer:document.getElementById('opt-timer').checked}});
+  socket.once('room:joined',()=>showScreen('s-lobby'));
+}
+function joinRoom(){
+  const name=document.getElementById('j-name').value.trim();
+  const code=document.getElementById('j-code').value.trim().toUpperCase();
+  if(!name){toast('Entre ton prénom !','err');return;}
+  if(code.length<4){toast('Code invalide !','err');return;}
+  initSocket();setLoading(true,'CONNEXION…');
+  socket.emit('room:join',{name,code});
+  socket.once('room:joined',()=>showScreen('s-lobby'));
+}
+function joinAsSpectator(){
+  if(!_pendingSpec)return;
+  _isSpectator=true;
+  socket.emit('room:join',{name:_pendingSpec.name,code:_pendingSpec.code,asSpectator:true});
+}
+function addBot(){socket.emit('bot:add');}
+function removeBot(name){socket.emit('bot:remove',{botName:name});}
+function leaveRoom(){
+  if(socket)socket.emit('room:leave');
+  sessionStorage.removeItem('uc');clearClientTimer();resetState();_isSpectator=false;_pendingSpec=null;
+  showScreen('s-home');
+}
+function copyCode(){navigator.clipboard.writeText(S.code).then(()=>toast('Code copié : '+S.code,'ok'));}
+function hostStart(){
+  setLoading(true,'PRÉPARATION…');
+  socket.emit('game:start',{genre:S.genre,settings:{mrWhite:document.getElementById('opt-mrw')?.checked,doubleUndercover:document.getElementById('opt-uc2')?.checked,wordTimer:document.getElementById('opt-timer')?.checked}});
+}
+
+// ── CARD ──
+function buildCardFront(a){
+  const imgEl=document.getElementById('cf-img');
+  if(a.image){const proxyUrl=`https://images.weserv.nl/?url=${encodeURIComponent(a.image).replace(/^https?%3A%2F%2F/,"")}&w=300&output=jpg&il`;imgEl.innerHTML=`<img src="${proxyUrl}" alt="" onerror="this.parentElement.innerHTML='<div class=cf-img-ph>🎭</div>'"/>`;}
+  else{imgEl.innerHTML=`<div class="cf-img-ph">${a.role==='mr-white'?'❓':'🎭'}</div>`;}
+  if(a.role==='mr-white'){document.getElementById('cf-name').textContent='Rôle caché';document.getElementById('cf-name').className='cf-name unk';document.getElementById('cf-hint').textContent='Tu ne sais pas quel perso. Bluff pour survivre !';}
+  else{document.getElementById('cf-name').textContent=a.word||'—';document.getElementById('cf-name').className='cf-name';document.getElementById('cf-hint').textContent=`⚠️ Interdit : ${(a.blockedWords||[]).join(', ')||a.word}`;}
+}
+function flipCard(){if(S.cardFlipped)return;S.cardFlipped=true;document.getElementById('the-card').classList.add('flipped');document.getElementById('rv-tap').style.display='none';document.getElementById('rv-done').style.display='block';soundOk();vibeOk();}
+function doneReading(){document.getElementById('the-card').classList.remove('flipped');socket.emit('player:ready');showScreen('s-waiting');}
+function renderReadyList(players){document.getElementById('rlist').innerHTML=Object.entries(players).filter(([,p])=>!p.isSpectator).map(([n,p])=>`<div class="rrow"><div class="rdot ${p.ready?'ok':''}"></div><span class="rname">${n}</span><span class="rstatus ${p.ready?'done':''}">${p.ready?'Lu ✓':'en lecture…'}</span></div>`).join('');}
+
+// ── TIMER ──
+function startClientTimer(endTimestamp,phase){
+  clearClientTimer();
+  const total=phase==='words'?45:60;
+  const fill=document.getElementById('timer-fill'),label=document.getElementById('timer-label'),wrap=document.getElementById('timer-wrap');
+  wrap.style.display='block';
+  timerInterval=setInterval(()=>{
+    const remaining=Math.max(0,Math.round((endTimestamp-Date.now())/1000));
+    fill.style.width=(remaining/total*100)+'%';
+    label.textContent=remaining+'s';
+    fill.classList.toggle('urgent',remaining<=10);
+    if(remaining<=10&&remaining>0)soundTimer();
+    if(remaining<=5&&remaining>0)vibe(30);
+    if(remaining===0)clearClientTimer();
+  },1000);
+}
+function clearClientTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}const w=document.getElementById('timer-wrap');if(w)w.style.display='none';}
+
+// ── PLAYING ──
+function renderPlaying(room){
+  if(room)_lastRoom=room;else room=_lastRoom;if(!room)return;
+  const players=room.players||{};
+  const names=Object.keys(players).filter(n=>!players[n].isSpectator);
+  const alive=names.filter(n=>!players[n].eliminated);
+  const rk=`round${room.round}`;
+  const wordsNow=room.words?.[rk]||{};
+  const votesNow=room.votes?.[rk]||{};
+  const accusationsNow=room.accusations?.[rk]||{};
+  document.getElementById('g-round').textContent=room.round;
+  document.getElementById('g-alive').textContent=alive.length;
+
+  // Turn order bar
+  const turnOrder=room.turnOrder||[];
+  const tobEl=document.getElementById('turn-order-bar');
+  const tolEl=document.getElementById('turn-order-list');
+  if(turnOrder.length>0&&S.subPhase==='words'){
+    tobEl.style.display='block';
+    tolEl.innerHTML=turnOrder.map((n,i)=>{
+      const hasWord=!!wordsNow[n];
+      const isMine=n===S.name;
+      return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border:1px solid ${isMine?'var(--gold)':hasWord?'rgba(0,255,135,.3)':'var(--border)'};color:${isMine?'var(--gold)':hasWord?'var(--green)':'var(--muted)'};font-size:10px;background:${isMine?'rgba(255,214,10,.06)':'transparent'}">
+        <span>${i+1}.</span>
+        <span>${EMOJIS[names.indexOf(n)%EMOJIS.length]}</span>
+        <span>${n}</span>
+        ${hasWord?'<span style="color:var(--green)">✓</span>':''}
+      </span>`;
+    }).join('');
+  } else { tobEl.style.display='none'; }
+
+  const voteTally={};alive.forEach(n=>{voteTally[n]=0;});Object.values(votesNow).forEach(t=>{if(voteTally[t]!==undefined)voteTally[t]++;});
+  const accTally={};alive.forEach(n=>{accTally[n]=0;});Object.values(accusationsNow).forEach(t=>{if(accTally[t]!==undefined)accTally[t]++;});
+
+  if(S.myAssignment?.word){document.getElementById('my-word').style.display='flex';document.getElementById('mw-v').textContent=S.myAssignment.word;document.getElementById('mw-role').textContent=S.myAssignment.role==='undercover'?'🕵️':'👤';}
+
+  document.getElementById('pgrid').innerHTML=names.map((n,i)=>{
+    const acc=accTally[n]||0;
+    const isBot=players[n]?.isBot||false;
+    return `<div class="pcard ${players[n].eliminated?'dead':''} ${_myVote===n&&!players[n].eliminated?'voted-for':''}"><span class="pc-em">${EMOJIS[i%EMOJIS.length]}</span><div style="flex:1"><div class="pc-n">${n}${isBot?' <span style=\"font-family:var(--fm);font-size:8px;color:var(--cyan);letter-spacing:.1em\">BOT</span>':''}</div><div class="pc-s">${players[n].eliminated?'☠ éliminé':'en vie'}</div>${acc>0?`<div style="font-family:var(--fm);font-size:9px;color:var(--red);margin-top:2px">👉 x${acc}</div>`:''}</div>${S.subPhase==='vote'&&(voteTally[n]||0)>0&&!players[n].eliminated?`<span class="pc-votes">${voteTally[n]}▲</span>`:''}</div>`;
+  }).join('');
+
+  if(room.mrWhiteGuessPhase){document.getElementById('words-box').style.display='none';document.getElementById('vote-box').style.display='none';if(S.myAssignment?.role==='mr-white')document.getElementById('mrw-box').classList.add('show');return;}
+
+  const aliveActive=alive.filter(n=>!players[n].eliminated);
+  const allDone=aliveActive.length>0&&aliveActive.every(n=>wordsNow[n]);
+  if(allDone)S.subPhase='vote';
+
+  // ── WORDS PHASE ──
+  if(S.subPhase==='words'){
+    document.getElementById('words-box').style.display='block';document.getElementById('vote-box').style.display='none';
+
+    const mine = wordsNow[S.name];
+    const isMyTurn = _currentTurnPlayer === S.name;
+    const iEliminated = players[S.name]?.eliminated;
+
+    // Input: only show if it's my turn AND I haven't submitted yet
+    document.getElementById('winput-row').style.display = (!mine && isMyTurn && !iEliminated) ? 'flex' : 'none';
+    document.getElementById('sub-notice').classList.toggle('show', !!mine && !isMyTurn);
+
+    // "Your turn" or "waiting" message
+    let statusHtml = '';
+    if(!mine && !iEliminated){
+      if(isMyTurn){
+        statusHtml = `<div style="display:flex;align-items:center;gap:8px;padding:8px 0 4px;font-family:var(--fm);font-size:11px;color:var(--gold);letter-spacing:.1em;animation:blink 1s infinite">🎯 C'EST TON TOUR — écris ton mot !</div>`;
+      } else if(_currentTurnPlayer){
+        statusHtml = `<div style="padding:8px 0 4px;font-family:var(--fm);font-size:11px;color:var(--muted);letter-spacing:.08em">⏳ Tour de <b style="color:var(--text)">${_currentTurnPlayer}</b>…</div>`;
+      }
+    } else if(mine) {
+      statusHtml = `<div style="display:flex;align-items:center;gap:8px;padding:8px 0 4px;font-family:var(--fm);font-size:11px;color:var(--green);letter-spacing:.1em">✓ Mot envoyé${_currentTurnPlayer && !isMyTurn ? ` — tour de <b>${_currentTurnPlayer}</b>` : ''}</div>`;
+    }
+
+    document.getElementById('words-list').innerHTML = statusHtml + aliveActive.map(n=>{const w=wordsNow[n];const isNext=_currentTurnPlayer===n&&!w;const isBot=players[n]?.isBot;return `<div class="wentry ${isNext?'active-turn':''}"><span class="we-auth">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}${isBot?' 🤖':''}${isNext?' ✍️':''}</span>${w?`<span class="we-word">${w}</span>`:`<span class="we-pend">${isNext?(isBot?'le bot réfléchit…':'en train d\'écrire…'):'en attente…'}</span>`}</div>`;}).join('');
+
+    const as=document.getElementById('accuse-section');
+    if(mine&&!iEliminated){
+      as.style.display='block';const myAcc=accusationsNow[S.name];
+      document.getElementById('accuse-btns').innerHTML=aliveActive.filter(n=>n!==S.name).map(n=>`<button class="chip ${myAcc===n?'on':''}" onclick="accuse('${n}')" ${myAcc?'disabled':''}>${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}</button>`).join('');
+    }else{as.style.display='none';}
+    renderHistory(room,names);
+
+  // ── VOTE PHASE ──
+  }else{
+    document.getElementById('words-box').style.display='none';document.getElementById('vote-box').style.display='block';document.getElementById('accuse-section').style.display='none';tobEl.style.display='none';
+
+    // Show all rounds words in summary (not just current round)
+    let wsHtml='';
+    for(let r=Math.max(1,room.round-1);r<=room.round;r++){
+      const rwk=`round${r}`;const rw=room.words?.[rwk]||{};
+      const hasWords=aliveActive.some(n=>rw[n]);
+      if(hasWords)wsHtml+=`<div style="font-family:var(--fm);font-size:9px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:5px;margin-top:${r>1?'10px':'0'}">Tour ${r}</div>`+aliveActive.map(n=>`<div class="wentry"><span class="we-auth">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}</span><span class="we-word">${rw[n]||'—'}</span>${(accTally[n]||0)>0&&r===room.round?`<span style="font-family:var(--fm);font-size:10px;color:var(--red);margin-left:4px">👉${accTally[n]}</span>`:''}</div>`).join('');
+    }
+    document.getElementById('ws-content').innerHTML=wsHtml;
+
+    const hn=document.getElementById('host-note'),vb=document.getElementById('vbtns');
+    const myVoted=players[S.name]?.voted;
+    hn.textContent=myVoted?'Vote envoyé ✓ — en attente des autres.':'Vote pour le suspect à éliminer.';
+
+    const maxV=Math.max(...Object.values(voteTally),0);
+    // Everyone votes the same way — host is NOT special during vote
+    vb.innerHTML=aliveActive.map(n=>{
+      const votes=voteTally[n]||0,isL=votes>0&&votes===maxV,isM=_myVote===n;
+      const isSelf=n===S.name;
+      return `<button class="vbtn ${isM?'selected':''} ${isL?'leading':''}" onclick="castVote('${n}')" ${(myVoted&&!isM)||isSelf?'disabled':''}>${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n}${votes>0?`<span class="vbtn-votes">${votes}v</span>`:''}</button>`;
+    }).join('');
+
+    // Host override section (separate from normal vote buttons)
+    if(S.isHost){
+      vb.innerHTML+=`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-family:var(--fm);font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">⚡ Décision hôte (override)</div>
+        ${aliveActive.map(n=>`<button class="vbtn" style="border-color:rgba(255,45,85,.2)" onclick="if(confirm('Forcer l\\'élimination de ${n} ?'))socket.emit('vote:eliminate',{target:'${n}'})">${EMOJIS[names.indexOf(n)%EMOJIS.length]} ${n} <span style="margin-left:auto;font-family:var(--fm);font-size:10px;color:var(--red)">FORCER</span></button>`).join('')}
+      </div>`;
+    }
+  }
+}
+
+function accuse(target){socket.emit('player:accuse',{target});soundAccuse();vibeOk();if(_lastRoom){const rk=`round${_lastRoom.round}`;if(!_lastRoom.accusations)_lastRoom.accusations={};if(!_lastRoom.accusations[rk])_lastRoom.accusations[rk]={};_lastRoom.accusations[rk][S.name]=target;renderPlaying(null);}}
+function renderHistory(room,names){const h=document.getElementById('hist-section');if(room.round<=1){h.innerHTML='';return;}let html=`<div class="hist-title">Historique</div>`;for(let r=1;r<room.round;r++){const rk=`round${r}`;const words=room.words?.[rk]||{};const parts=names.filter(n=>words[n]).map(n=>`${n}: <b>${words[n]}</b>`).join(' · ');if(parts)html+=`<div class="hist-row"><span class="hist-round">Tour ${r}</span><span class="hist-words">${parts}</span></div>`;}h.innerHTML=html;}
+function castVote(target){if(_myVote)return;_myVote=target;socket.emit('vote:cast',{target});soundOk();vibeOk();if(_lastRoom)renderPlaying(_lastRoom);}
+function submitWord(){const input=document.getElementById('word-input');const word=input.value.trim();if(!word){toast('Entre un mot !','err');return;}socket.emit('word:submit',{word});input.value='';soundOk();vibeOk();if(_lastRoom){const rk=`round${_lastRoom.round}`;if(!_lastRoom.words)_lastRoom.words={};if(!_lastRoom.words[rk])_lastRoom.words[rk]={};_lastRoom.words[rk][S.name]=word;document.getElementById('winput-row').style.display='none';document.getElementById('sub-notice').classList.add('show');renderPlaying(null);}}
+function submitMrwGuess(){const g=document.getElementById('mrw-input').value.trim();if(!g)return;socket.emit('mrwhite:guess',{guess:g});document.getElementById('mrw-box').classList.remove('show');}
+
+// ── WORD REVEAL CARD ──
+let _revealQueue=[], _revealActive=false;
+function showWordReveal(player, word){
+  _revealQueue.push({player,word});
+  if(!_revealActive)processRevealQueue();
+}
+function processRevealQueue(){
+  if(_revealQueue.length===0){_revealActive=false;return;}
+  _revealActive=true;
+  const {player,word}=_revealQueue.shift();
+  const room=_lastRoom;
+  const players=room?.players||{};
+  const names=Object.keys(players).filter(n=>!players[n].isSpectator);
+  const idx=names.indexOf(player);
+  document.getElementById('wrc-emoji').textContent=EMOJIS[idx>=0?idx%EMOJIS.length:0];
+  document.getElementById('wrc-name').textContent=player;
+  document.getElementById('wrc-word').textContent=word;
+  const card=document.getElementById('word-reveal-card');
+  // Rebuild bar animation
+  const bar=card.querySelector('.wrc-bar');
+  bar.style.animation='none';void bar.offsetWidth;bar.style.animation='wrcBar .5s ease .1s both';
+  card.classList.add('show');
+  beep(600,.08,.12);vibe(30);
+  setTimeout(()=>{
+    card.classList.remove('show');
+    setTimeout(()=>processRevealQueue(), 200);
+  }, 2200);
+}
+
+// ── ELIM OVERLAY ──
+function showElimOverlay(name){const el=document.getElementById('elim-overlay');document.getElementById('elim-name').textContent=name;document.getElementById('elim-sub').textContent='a été éliminé de la partie';document.getElementById('elim-continue').style.display='none';el.classList.add('show');setTimeout(()=>{document.getElementById('elim-continue').style.display='block';setTimeout(()=>el.classList.remove('show'),3000);},2500);}
+
+// ── RESULT ──
+function renderResult(room){
+  const o=room.result?.outcome;
+  const win=o==='civilians-win';
+  const tm={'civilians-win':'VICTOIRE','undercover-wins':'INFILTRÉ','mrwhite-wins':'MR. WHITE'};
+  const sm={'civilians-win':"Les civils ont démasqué l'imposteur !",'undercover-wins':"L'Undercover a survécu…",'mrwhite-wins':'Mr. White a deviné le mot civil !'};
+  document.getElementById('res-glow').className=win?'res-glow-win':'res-glow-lose';
+  const el=document.getElementById('res-title');el.textContent=tm[o]||'FIN';el.className='res-title '+(win?'win':'lose');
+  document.getElementById('res-sub').textContent=sm[o]||'';
+  if(win){soundVictory();vibe([50,30,50,30,200]);}else{soundElim();vibeElim();}
+  const asgn=room.assignments||{};
+  const ucs=Object.entries(asgn).filter(([,a])=>a.role==='undercover').map(([n])=>n);
+  const mrw=Object.entries(asgn).find(([,a])=>a.role==='mr-white')?.[0];
+  document.getElementById('res-details').innerHTML=`<div class="rcr"><span class="rcl">Mot Civil</span><span class="rcv cv">${room.wordPair?.civilian||'—'}</span></div><div class="rcr"><span class="rcl">Mot Undercover</span><span class="rcv rv">${room.wordPair?.undercover||'—'}</span></div><div class="rcr"><span class="rcl">Undercover${ucs.length>1?'s':''}</span><span class="rcv rv">${ucs.join(', ')||'—'}</span></div>${mrw?`<div class="rcr"><span class="rcl">Mr. White</span><span class="rcv" style="color:var(--muted)">${mrw}</span></div>`:''}<div class="rcr"><span class="rcl">Animés</span><span class="rcv" style="color:var(--muted);font-size:11px;font-family:var(--fm)">${room.wordPair?.anime1} vs ${room.wordPair?.anime2}</span></div>${room.wordPair?.hint?`<div class="rcr"><span class="rcl">Pourquoi similaires</span><span class="rcv" style="color:var(--muted);font-size:11px;font-family:var(--fm);text-align:right">${room.wordPair.hint}</span></div>`:''}`;
+  const scores=room.scores||{};const names=Object.keys(room.players||{}).filter(n=>!room.players[n].isSpectator);
+  const hasScores=names.some(n=>(scores[n]?.wins||0)>0);const rsBox=document.getElementById('res-scores');
+  if(hasScores){rsBox.style.display='block';const sorted=[...names].sort((a,b)=>(scores[b]?.wins||0)-(scores[a]?.wins||0));document.getElementById('rs-rows').innerHTML=sorted.map((n,i)=>`<div class="rs-row"><div><div class="rs-name">${i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':''}${n}</div><div class="rs-role">${roleLabel(asgn[n]?.role)}</div></div><span class="rs-score">${scores[n]?.wins||0} pts</span></div>`).join('');}
+  else{rsBox.style.display='none';}
+  document.getElementById('res-replay').style.display=S.isHost?'inline-flex':'none';
+}
+function roleLabel(r){if(r==='undercover')return '🕵️ Undercover';if(r==='mr-white')return '❓ Mr. White';return '👤 Civil';}
+function hostReset(){socket.emit('game:reset');}
+
+// ── SHARE SCORE ──
+function shareScore(){
+  if(!_lastRoom)return;
+  const scores=_lastRoom.scores||{};
+  const players=Object.keys(_lastRoom.players||{}).filter(n=>!_lastRoom.players[n].isSpectator);
+  const sorted=[...players].sort((a,b)=>(scores[b]?.wins||0)-(scores[a]?.wins||0));
+  const outcome=_lastRoom.result?.outcome;
+  const ot={'civilians-win':"Les civils ont gagné !",'undercover-wins':"L'Undercover a survécu !",'mrwhite-wins':"Mr. White a deviné !"}[outcome]||'';
+  const text=`🕵️ UNDERCOVER ANIMÉ\n${ot}\n\n🏆 Scores :\n${sorted.map((n,i)=>`${i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '} ${n} — ${scores[n]?.wins||0} pt${(scores[n]?.wins||0)>1?'s':''}`).join('\n')}\n\nJoue sur : mjgtell.github.io/Undercover-Anim-`;
+  if(navigator.share)navigator.share({title:'Undercover Animé',text}).catch(()=>{});
+  else navigator.clipboard.writeText(text).then(()=>toast('Scores copiés !','ok'));
+}
+
+
+// ══════════════════════════════════════════════════════
+//  VOICE CHAT — WebRTC mesh + Web Audio
+// ══════════════════════════════════════════════════════
+
+const STUN = { iceServers: [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+]};
+
+const Voice = {
+  active: false,         // joined voice?
+  muted: false,          // my mic muted?
+  stream: null,          // my MediaStream
+  peers: {},             // name -> { pc, gainNode, audioEl, muted, speaking }
+  vuInterval: null,
+  analyser: null,
+  vuSource: null,
+  selectedDeviceId: '',
+  panelOpen: false,
+  remoteMuted: {},       // name -> bool (locally muted by me)
+  remoteVolume: {},      // name -> 0..2 float
+};
+
+// ── Helpers ────────────────────────────────────────────
+
+function voiceIsInGame(){
+  const s = document.querySelector('.screen.active')?.id;
+  return ['s-lobby','s-reveal','s-waiting','s-playing','s-spectator','s-result'].includes(s);
+}
+
+function voiceShowBtn(show){
+  const btn = document.getElementById('voice-btn');
+  btn.classList.toggle('visible', show);
+}
+
+function voiceUpdateBtn(){
+  const btn = document.getElementById('voice-btn');
+  if(Voice.active && !Voice.muted) btn.className='on visible';
+  else if(Voice.active && Voice.muted) btn.className='on visible'; // still on, just muted
+  else btn.className='off visible';
+  // speaking anim
+  if(Voice.speaking) btn.classList.add('speaking');
+  btn.textContent = Voice.active ? (Voice.muted ? '🔇' : '🎙️') : '🎙️';
+}
+
+function toggleVoicePanel(){
+  const panel = document.getElementById('voice-panel');
+  Voice.panelOpen = !Voice.panelOpen;
+  panel.classList.toggle('show', Voice.panelOpen);
+  if(Voice.panelOpen){ voiceLoadDevices(); voiceRenderPanel(); }
+}
+
+// ── Device list ────────────────────────────────────────
+
+async function voiceLoadDevices(){
   try {
-    const res = await fetch(GROQ_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY || ''}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        max_tokens: 60,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
-    });
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || null;
-  } catch (e) {
-    console.error('Groq API error:', e.message);
-    return null;
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const mics = devices.filter(d => d.kind === 'audioinput');
+    const sel = document.getElementById('vp-mic-select');
+    sel.innerHTML = mics.length
+      ? mics.map(d => `<option value="${d.deviceId}" ${d.deviceId===Voice.selectedDeviceId?'selected':''}>${d.label||'Micro '+(mics.indexOf(d)+1)}</option>`).join('')
+      : '<option value="">Aucun micro détecté</option>';
+  } catch(e){ console.warn('voiceLoadDevices', e); }
+}
+
+async function changeMic(deviceId){
+  Voice.selectedDeviceId = deviceId;
+  if(!Voice.active) return;
+  // Restart stream with new device
+  await voiceGetStream();
+  // Replace track in all peers
+  const track = Voice.stream?.getAudioTracks()[0];
+  if(!track) return;
+  for(const [, peer] of Object.entries(Voice.peers)){
+    const sender = peer.pc?.getSenders().find(s => s.track?.kind === 'audio');
+    if(sender) sender.replaceTrack(track).catch(()=>{});
   }
+  toast('Micro changé ✓','ok');
 }
 
-// Pick a bot name not already in use
-function pickBotName(room) {
-  const used = Object.keys(room.players);
-  return BOT_NAMES.find(n => !used.includes(n)) || 'Bot' + Math.floor(Math.random()*99);
-}
-
-// Bot submits its word for its turn
-async function botSubmitWord(room, code, botName) {
-  const assignment = room.assignments[botName];
-  if (!assignment) return;
-
-  const character = assignment.word; // just the character name, NOT the role
-  const rk = `round${room.round}`;
-  const wordsThisRound = room.words[rk] || {};
-
-  // Words already said by others this round
-  const otherWords = Object.entries(wordsThisRound)
-    .filter(([n]) => n !== botName)
-    .map(([n, w]) => `${n}: "${w}"`)
-    .join('\n');
-
-  // History of previous rounds
-  let history = '';
-  for (let r = 1; r < room.round; r++) {
-    const rk2 = `round${r}`;
-    const prev = Object.entries(room.words[rk2] || {})
-      .map(([n, w]) => `${n}: "${w}"`)
-      .join(', ');
-    if (prev) history += `Tour ${r} — ${prev}\n`;
-  }
-
-  const roundNum = room.round;
-  const system = `You are playing Undercover, a deduction game. Reply in French only.
-Your secret character is: ${character}
-Give ONE single French word that hints at your character without being too obvious.
-
-STRICT RULES:
-- Never say the character's name or any part of it
-- ONE word only, no explanation, no punctuation
-- Round 1-2: use a VAGUE word that fits many anime characters (examples: "déterminé", "sombre", "puissant", "rapide", "loyal", "froid", "rage", "honneur"). Stay safe, don't reveal yourself.
-- Round 3+: you can be slightly more specific but stay cautious
-- Pick a word that matches YOUR character but could also fit others`;
-
-  const user = `Round ${roundNum}. Your character: ${character}.
-${otherWords ? `Words said this round:\n${otherWords}\n` : 'You speak first this round.'}
-${history ? `Previous rounds:\n${history}` : ''}
-Reply with ONE French word only.`;
-
-  const word = await callClaude(system, user);
-
-  // Fallback if API fails or returns bad response
-  const fallbacks = ['courage', 'force', 'mystère', 'regard', 'combat', 'silence', 'volonté', 'puissance'];
-  const finalWord = (word && word.split(' ').length === 1 && word.length < 30)
-    ? word
-    : fallbacks[Math.floor(Math.random() * fallbacks.length)];
-
-  // Check it's not blocked
-  const blocked = assignment.blockedWords || [];
-  const wLower = finalWord.toLowerCase().replace(/[^a-zàâäéèêëîïôùûü]/gi, '');
-  const isBlocked = blocked.some(b => wLower.includes(b) || b.includes(wLower));
-
-  if (isBlocked) {
-    // Just use a safe fallback
-    return submitBotWordToRoom(room, code, botName, fallbacks[0]);
-  }
-
-  return submitBotWordToRoom(room, code, botName, finalWord);
-}
-
-function submitBotWordToRoom(room, code, botName, word) {
-  const rk = `round${room.round}`;
-  if (!room.words[rk]) room.words[rk] = {};
-  if (room.words[rk][botName]) return; // already submitted
-
-  room.words[rk][botName] = word;
-  io.to(code).emit('word:revealed', { player: botName, word, round: room.round });
-  io.to(code).emit('toast', `🤖 ${botName} a joué`);
-
-  // Advance turn (same logic as word:submit handler)
-  room.currentTurnIndex++;
-  const aliveTurnOrder = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected);
-  const allDone = aliveTurnOrder.every(n => room.words[rk][n]);
-
-  if (allDone) {
-    const votingLocked = room.round < (room.votingUnlockedAtRound || 2);
-    if (votingLocked) {
-      io.to(code).emit('toast', `Tour ${room.round} terminé — tour ${room.round + 1} !`);
-      broadcastRoom(code);
-      setTimeout(() => nextRound(room, code), 1400);
-    } else {
-      room.subPhase = 'vote';
-      Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
-      broadcastRoom(code);
-      if (room.settings?.wordTimer) startTimer(code, VOTE_TIMER_SECS, 'vote');
-    }
-  } else {
-    const nextPlayer = aliveTurnOrder[room.currentTurnIndex % aliveTurnOrder.length];
-    broadcastRoom(code);
-    io.to(code).emit('turn:next', { player: nextPlayer });
-    // If next player is also a bot, chain
-    if (room.players[nextPlayer]?.isBot) {
-      setTimeout(() => botSubmitWord(room, code, nextPlayer), BOT_THINK_DELAY);
-    } else {
-      if (room.settings?.wordTimer) startTimer(code, WORD_TIMER_SECS, 'words');
-    }
-  }
-}
-
-// Bot casts its vote — analyzes all words vs its own character, no role knowledge
-async function botCastVote(room, code, botName) {
-  const assignment = room.assignments[botName];
-  if (!assignment) return;
-
-  const character = assignment.word; // bot only knows its character, not its role
-  const alive = getAlive(room).filter(n => n !== botName);
-  if (alive.length === 0) return;
-
-  // Collect all words from all rounds
-  let allWords = {};
-  for (let r = 1; r <= room.round; r++) {
-    const rk = `round${r}`;
-    Object.entries(room.words[rk] || {}).forEach(([n, w]) => {
-      if (!allWords[n]) allWords[n] = [];
-      allWords[n].push(`tour ${r}: "${w}"`);
-    });
-  }
-
-  const wordSummary = alive
-    .map(n => `${n} — ${(allWords[n] || ['(rien)']).join(', ')}`)
-    .join('\n');
-
-  const system = `You are playing Undercover. Your character is: ${character}. Reply with ONE name only.
-Analyze each player's words. Vote to eliminate the player whose words seem LEAST related to your character.
-Reply with ONLY the exact player name, nothing else, no explanation.`;
-
-  const user = `Your character: ${character}
-Players and their words:
-${wordSummary}
-
-Which player's words are least consistent with your character? Reply with their name only.`;
-
-  const answer = await callClaude(system, user);
-
-  // Find the closest match to a valid player name
-  const target = alive.find(n => answer && answer.toLowerCase().includes(n.toLowerCase()))
-    || alive[Math.floor(Math.random() * alive.length)]; // fallback: random
-
-  // Submit the vote
-  const rk = `round${room.round}`;
-  if (!room.votes[rk]) room.votes[rk] = {};
-  room.votes[rk][botName] = target;
-  room.players[botName].voted = true;
-  broadcastRoom(code);
-  io.to(code).emit('toast', `🤖 ${botName} a voté`);
-
-  // Check if all have voted
-  const aliveAll = getAlive(room);
-  if (aliveAll.every(n => room.votes[rk][n])) {
-    clearTimer(code);
-    const tally = {};
-    aliveAll.forEach(n => { tally[n] = 0; });
-    Object.values(room.votes[rk]).forEach(t => { if (tally[t] !== undefined) tally[t]++; });
-    const maxV = Math.max(...Object.values(tally));
-    const tied = aliveAll.filter(n => tally[n] === maxV);
-    if (tied.length === 1) {
-      eliminatePlayer(room, tied[0], code);
-    } else {
-      io.to(code).emit('vote:tie', { tied, tally });
-      broadcastRoom(code);
-    }
-  }
-}
-
-// Called when it's a bot's turn (word phase)
-function scheduleBotTurn(room, code, botName) {
-  if (!room.players[botName]?.isBot) return;
-  io.to(code).emit('toast', `🤖 ${botName} réfléchit…`);
-  setTimeout(() => botSubmitWord(room, code, botName), BOT_THINK_DELAY);
-}
-
-// Called when vote phase starts — bots vote after a delay
-function scheduleBotVotes(room, code) {
-  const bots = getAlive(room).filter(n => room.players[n]?.isBot);
-  bots.forEach((botName, i) => {
-    // Stagger bots: first after 2s, then every 1.5s to avoid Groq rate limits
-    setTimeout(async () => {
-      if (room.phase === 'playing' && room.subPhase === 'vote' && !room.players[botName]?.voted) {
-        await botCastVote(room, code, botName);
-      }
-    }, 2000 + i * 1500);
-  });
-}
-
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] }, pingInterval: 10000, pingTimeout: 30000, upgradeTimeout: 30000 });
-
-// ═══════════════════════════════
-//  PAIRS DATABASE
-// ═══════════════════════════════
-const PAIRS = {
-  shonen: [
-    // Héros solaires qui sourient même dans la douleur, puissance née de la volonté pure
-    { civilian:'Naruto Uzumaki', undercover:'Izuku Midoriya', anime1:'Naruto', anime2:'My Hero Academia', hint:'Héros rejetés devenus symboles d\'espoir' },
-    // Deux garçons calmes, cheveux sombres, pouvoirs surnaturels liés à la mort, aura bleue/froide
-    { civilian:'Tanjiro Kamado', undercover:'Yusuke Urameshi', anime1:'Demon Slayer', anime2:'Yu Yu Hakusho', hint:'Garçons bienveillants devenus chasseurs de démons' },
-    // Deux rivaux froids, cheveux sombres dressés, regard intense, ego de guerrier
-    { civilian:'Sasuke Uchiha', undercover:'Vegeta', anime1:'Naruto', anime2:'Dragon Ball Z', hint:'Rivaux orgueilleux obsédés par la puissance' },
-    // Deux guerriers petits mais dévastateurs, regard d'acier, réputation de massacre
-    { civilian:'Levi Ackerman', undercover:'Killua Zoldyck', anime1:'Attack on Titan', anime2:'Hunter x Hunter', hint:'Tueurs froids à la vitesse surhumaine' },
-    // Deux capitaines fous, sourire constant, corps élastique/libre, vivent pour l'aventure
-    { civilian:'Monkey D. Luffy', undercover:'Gon Freecss', anime1:'One Piece', anime2:'Hunter x Hunter', hint:'Garçons solaires à la force brute et pure' },
-    // Deux êtres surpuissants décontractés, bras croisés, personne ne peut les toucher
-    { civilian:'Gojo Satoru', undercover:'Saitama', anime1:'Jujutsu Kaisen', anime2:'One Punch Man', hint:'Les plus forts de leur monde, mais détachés' },
-    // Deux protagonistes qui basculent dans la noirceur, transformation physique, perte d'humanité
-    { civilian:'Eren Yeager', undercover:'Kaneki Ken', anime1:'Attack on Titan', anime2:'Tokyo Ghoul', hint:'Jeunes hommes consumés par leur propre monstre' },
-    // Deux génies froids qui planifient tout, trahison/sacrifice, portent des masques émotionnels
-    { civilian:'Itachi Uchiha', undercover:'Aizen Sosuke', anime1:'Naruto', anime2:'Bleach', hint:'Géniaux traîtres au sacrifice calculé' },
-    // Deux porteurs d'un être destructeur en eux, corps impulsif, pouvoir incontrôlable
-    { civilian:'Yuji Itadori', undercover:'Denji', anime1:'Jujutsu Kaisen', anime2:'Chainsaw Man', hint:'Hôtes d\'une entité dévastatrice' },
-    // Deux petits protagonistes blonds, amputés ou marqués, alchimie vs magie, quête de rédemption
-    { civilian:'Edward Elric', undercover:'Asta', anime1:'Fullmetal Alchemist', anime2:'Black Clover', hint:'Petits blondins déterminés malgré tout' },
-    // Deux antagonistes ultimes, aristocratiques, pouvoirs de régénération absolue
-    { civilian:'Ryomen Sukuna', undercover:'Muzan Kibutsuji', anime1:'Jujutsu Kaisen', anime2:'Demon Slayer', hint:'Rois des démons quasi-immortels' },
-    // Deux guerriers rouges au feu, cheveux vifs, chaleur et impulsivité
-    { civilian:'Natsu Dragneel', undercover:'Portgas D. Ace', anime1:'Fairy Tail', anime2:'One Piece', hint:'Utilisateurs de flammes aux cheveux sombres' },
-    // Deux hommes au regard impassible, masque/chapeau, enseignent en cachant leur vraie force
-    { civilian:'Kakashi Hatake', undercover:'Aizawa Shouta', anime1:'Naruto', anime2:'My Hero Academia', hint:'Profs nonchalants qui cachent une puissance réelle' },
-  ],
-
-  fantasy: [
-    // Deux épéistes solitaires dans un monde de jeu/donjon, noirs vêtus, yeux vides mais déterminés
-    { civilian:'Kirito', undercover:'Bell Cranel', anime1:'Sword Art Online', anime2:'DanMachi', hint:'Épéistes solitaires progressant dans un donjon' },
-    // Deux isekai qui souffrent à répétition, réinitialisations/revivre la mort, psychologie brisée
-    { civilian:'Subaru Natsuki', undercover:'Naofumi Iwatani', anime1:'Re:Zero', anime2:'Shield Hero', hint:'Isekai traités injustement qui repartent de zéro' },
-    // Deux seigneurs tout-puissants dans un monde fantastique, froids, manipulateurs mais complexes
-    { civilian:'Ainz Ooal Gown', undercover:'Lelouch vi Britannia', anime1:'Overlord', anime2:'Code Geass', hint:'Stratèges masqués qui jouent aux échecs avec des vies' },
-    // Deux filles mystérieuses non-humaines, longues tresses, regard distant, découvrent les émotions
-    { civilian:'Zero Two', undercover:'Violet Evergarden', anime1:'Darling in the FranXX', anime2:'Violet Evergarden', hint:'Filles hybrides qui apprennent à être humaines' },
-    // Deux magiciens overpowered réincarnés, vie précédente de gamer, nouveau monde de magie
-    { civilian:'Rudeus Greyrat', undercover:'Rimuru Tempest', anime1:'Mushoku Tensei', anime2:'Tensura', hint:'Réincarnés overpowered qui construisent leur empire' },
-    // Deux filles-renard, oreilles et queue, loyales et espièles, lien fort avec leur compagnon
-    { civilian:'Holo', undercover:'Raphtalia', anime1:'Spice & Wolf', anime2:'Shield Hero', hint:'Bêtes-humaines loyales à leur partenaire' },
-    // Deux stratèges cérébaux bloqués dans un monde de jeu, lunettes ou regard calculateur
-    { civilian:'Shiroe', undercover:'Sora', anime1:'Log Horizon', anime2:'No Game No Life', hint:'Gamers stratèges qui dominent leur monde' },
-    // Deux héroïnes cheveux bleus, calmes, dévouées, pouvoirs de glace ou d'eau
-    { civilian:'Rem', undercover:'Aqua', anime1:'Re:Zero', anime2:'KonoSuba', hint:'Filles aux pouvoirs de froid/eau dans un isekai' },
-    // Deux chevaliers en armure, sens de l'honneur absolu, servent leur maître corps et âme
-    { civilian:'Saber', undercover:'Erza Scarlet', anime1:'Fate/stay night', anime2:'Fairy Tail', hint:'Guerrières en armure à l\'honneur inflexible' },
-    // Deux protagonistes isekai comiques, malchanceux mais débrouillards
-    { civilian:'Kazuma Sato', undercover:'Hajime Nagumo', anime1:'KonoSuba', anime2:'Arifureta', hint:'Isekai rejetés par leur équipe qui s\'en sortent quand même' },
-  ],
-
-  action: [
-    // Deux détectives génies opposés, l'un assis bizarrement, l'autre debout, guerre psychologique
-    { civilian:'L Lawliet', undercover:'Shikamaru Nara', anime1:'Death Note', anime2:'Naruto', hint:'Génies paresseux en apparence, redoutables en vrai' },
-    // Deux tireurs d'élite froids, visage émacié, yeux enfoncés, silhouette longiligne
-    { civilian:'Aizen Sosuke', undercover:'Griffith', anime1:'Bleach', anime2:'Berserk', hint:'Anges déchus au plan millénaire et au sourire glacial' },
-    // Deux guerriers solitaires en noir, cicatrices, code moral strict, combattent seuls
-    { civilian:'Zoro', undercover:'Guts', anime1:'One Piece', anime2:'Berserk', hint:'Combattants à l\'épée solitaires et marqués' },
-    // Deux antagonistes au sourire diabolique, manipulation, société corrompue = leur terrain
-    { civilian:'Shigaraki Tomura', undercover:'Griffith', anime1:'My Hero Academia', anime2:'Berserk', hint:'Antagonistes qui veulent détruire l\'ordre établi' },
-    // Deux exorcistes aux pouvoirs rares, cheveux sombres, austères, techniques spéciales
-    { civilian:'Megumi Fushiguro', undercover:'Byakuya Kuchiki', anime1:'Jujutsu Kaisen', anime2:'Bleach', hint:'Guerriers aristocratiques froids aux pouvoirs de convocation' },
-    // Deux pyrokinésistes militaires ambitieux, rouge/flamme, père absent ou ennemi
-    { civilian:'Roy Mustang', undercover:'Endeavor', anime1:'Fullmetal Alchemist', anime2:'My Hero Academia', hint:'Héros pyrokinésistes ambitieux et mauvais pères' },
-    // Deux femmes soldats ultimes, cheveux courts, pragmatiques, corps modifié
-    { civilian:'Mikasa Ackerman', undercover:'Motoko Kusanagi', anime1:'Attack on Titan', anime2:'Ghost in the Shell', hint:'Soldates froides au corps modifié, protègent leur prochain' },
-    // Deux piliers calmes, cheveux longs ou attachés, technique parfaite, disent peu
-    { civilian:'Giyu Tomioka', undercover:'Neji Hyuga', anime1:'Demon Slayer', anime2:'Naruto', hint:'Combattants d\'élite froids au style technique parfait' },
-    // Deux petits psychiques, expression neutre, destruction à distance sans effort
-    { civilian:'Mob', undercover:'Tatsumaki', anime1:'Mob Psycho 100', anime2:'One Punch Man', hint:'Psychiques overpowered qui semblent absents' },
-    // Deux anti-héros aux pouvoirs de destruction totale, isolés, incompris
-    { civilian:'Accelerator', undercover:'Hisoka Morow', anime1:'A Certain Magical Index', anime2:'Hunter x Hunter', hint:'Êtres supérieurs dérangés qui cherchent une vraie bataille' },
-  ],
-
-  romance: [
-    // Deux tsundere blondes explos, petite taille complexée, tombe amoureuse malgré elle
-    { civilian:'Taiga Aisaka', undercover:'Erina Nakiri', anime1:'Toradora', anime2:'Shokugeki no Soma', hint:'Blondes hautaines au cœur tendre caché' },
-    // Deux garçons cyniques mal dans leur peau, monologue intérieur acéré, rejet du monde
-    { civilian:'Hachiman Hikigaya', undercover:'Rei Kiriyama', anime1:'OreGairu', anime2:'March Comes in Like a Lion', hint:'Solitaires intelligents qui observent sans participer' },
-    // Deux prodiges musicaux traumatisés par leur mère, doigts qui tremblent, larmes sur les touches
-    { civilian:'Kousei Arima', undercover:'Shinichi Chiaki', anime1:'Your Lie in April', anime2:'Nodame Cantabile', hint:'Pianistes prodiges brisés qui se reconstruisent' },
-    // Deux filles discrètes blessées par le passé, communication difficile, lien inattendu
-    { civilian:'Shouko Nishimiya', undercover:'Mei Tachibana', anime1:'A Silent Voice', anime2:'Say I Love You', hint:'Filles solitaires qui apprennent la confiance' },
-    // Deux garçons ordinaires qui se sacrifient pour leur amour, maladroits mais sincères
-    { civilian:'Shoya Ishida', undercover:'Takeo Goda', anime1:'A Silent Voice', anime2:'My Love Story', hint:'Garçons brisés qui se rachètent par amour sincère' },
-    // Deux filles solaires au destin tragique, apportent la lumière puis disparaissent
-    { civilian:'Kaori Miyazono', undercover:'Menma', anime1:'Your Lie in April', anime2:'AnoHana', hint:'Filles lumineuses arrachées trop tôt' },
-    // Deux couples fusionnels bizarre-normal, l'un étrange, l'autre grounded
-    { civilian:'Tohru Honda', undercover:'Oreki Houtarou', anime1:'Fruits Basket', anime2:'Hyouka', hint:'Personnages lumineux/sombres qui s\'équilibrent' },
-    // Deux garçons introvertis tatoués ou marqués, cachent une vraie tendresse
-    { civilian:'Miyamura Izumi', undercover:'Nishikata', anime1:'Horimiya', anime2:'Karakai Jouzu no Takagi-san', hint:'Garçons introvertis qui s\'ouvrent à une seule personne' },
-    // Deux filles espionnes ou doubles visages, adorables dehors, calculatrices dedans
-    { civilian:'Yor Forger', undercover:'Himeno', anime1:'Spy x Family', anime2:'Chainsaw Man', hint:'Femmes douces en apparence, tueuses de métier' },
-    // Deux romances interclasses, différence de statut, tension entre devoir et sentiment
-    { civilian:'Kaguya Shinomiya', undercover:'Yukino Yukinoshita', anime1:'Kaguya-sama', anime2:'OreGairu', hint:'Héritières froides qui tombent amoureuses malgré leur fierté' },
-  ],
-
-  sports: [
-    // Deux petits joueurs discrets, visibles seulement à l'impact, changent les matchs en secret
-    { civilian:'Shoyo Hinata', undercover:'Tetsuya Kuroko', anime1:'Haikyuu', anime2:'Kuroko Basketball', hint:'Petits joueurs invisibles au grand impact' },
-    // Deux génies froids qui commandent le terrain, regard perçant, équipe obéit sans discuter
-    { civilian:'Tobio Kageyama', undercover:'Seijuro Akashi', anime1:'Haikyuu', anime2:'Kuroko Basketball', hint:'Génies du terrain qui contrôlent tout' },
-    // Deux attaquants au tir dévastateur, égoïstes assumés, leur puissance est leur identité
-    { civilian:'Yoichi Isagi', undercover:'Ryota Kise', anime1:'Blue Lock', anime2:'Kuroko Basketball', hint:'Attaquants offensifs avec une technique de copie/analyse' },
-    // Deux boxeurs au style offensif brut, partis de rien, cœur de lion
-    { civilian:'Ippo Makunouchi', undercover:'Joe Yabuki', anime1:'Hajime no Ippo', anime2:'Ashita no Joe', hint:'Boxeurs du peuple montant du bas par pur acharnement' },
-    // Deux joueurs de raquette génies arrogants, aucun doute sur leur supériorité
-    { civilian:'Ryoma Echizen', undercover:'Eiichirou Maruo', anime1:'Prince of Tennis', anime2:'Baby Steps', hint:'Adolescents au talent brut qui dominent la raquette' },
-    // Deux pivots physiques impressionnants, présence brute, ancre de l'équipe
-    { civilian:'Takenori Akagi', undercover:'Ushijima Wakatoshi', anime1:'Slam Dunk', anime2:'Haikyuu', hint:'Piliers physiques intransigeants et imposants' },
-    // Deux ace solitaires au shoot parfait, peu loquaces, résultats parlent
-    { civilian:'Eijun Sawamura', undercover:'Furuya Satoru', anime1:'Diamond no Ace', anime2:'Diamond no Ace', hint:'Lanceurs opposés, gauche vs droite, feu vs glace' },
-    // Deux outsiders qui redéfinissent leur sport par la donnée/l'analyse
-    { civilian:'Wataru Kuramochi', undercover:'Hanamichi Sakuragi', anime1:'Diamond no Ace', anime2:'Slam Dunk', hint:'Athlètes bruyants à l\'énergie débordante mais maladroits' },
-    // Deux duos de sport de glisse/vitesse, style élégant, perfection technique
-    { civilian:'Yuri Katsuki', undercover:'Noya Libero', anime1:'Yuri on Ice', anime2:'Haikyuu', hint:'Petits gabarits aux réflexes parfaits, techniques de précision' },
-    // Deux génie de mur défensif, leur valeur niée, finissent essentiels
-    { civilian:'Seishiro Nagi', undercover:'Reo Mikage', anime1:'Blue Lock', anime2:'Blue Lock', hint:'Duo Blue Lock : le génie brut et le stratège raffiné' },
-  ],
-
-  mix: [
-    // Deux génies de la manipulation, assis bizarrement, tout le monde est leur pion
-    { civilian:'L Lawliet', undercover:'Shikamaru Nara', anime1:'Death Note', anime2:'Naruto', hint:'Génies paresseux qui voient 10 coups d\'avance' },
-    // Deux protagonistes qui jouent à être des dieux, notes de mort/géass, condamnés par leur propre arme
-    { civilian:'Light Yagami', undercover:'Lelouch vi Britannia', anime1:'Death Note', anime2:'Code Geass', hint:'Justiciers déchus qui se prennent pour des dieux' },
-    // Deux cowboys de l'espace détachés, cigarette/posture, passé qu'ils fuient
-    { civilian:'Spike Spiegel', undercover:'Vash the Stampede', anime1:'Cowboy Bebop', anime2:'Trigun', hint:'Tireurs vagabonds au passé douloureux et au sourire triste' },
-    // Deux femmes cyborgs/soldates froides, cheveux courts, efficacité pure
-    { civilian:'Motoko Kusanagi', undercover:'Revy', anime1:'Ghost in the Shell', anime2:'Black Lagoon', hint:'Femmes armées froides et cyniques au corps de combat' },
-    // Deux protagonistes ordinaires dans des situations de mort extraordinaires, ni super ni chanceux
-    { civilian:'Shinji Ikari', undercover:'Makoto Naegi', anime1:'Evangelion', anime2:'Danganronpa', hint:'Garçons ordinaires jetés dans un monde qui veut les tuer' },
-    // Deux esprits/dieux mineurs, sombres, pouvoirs de vitesse/ombre, font peur mais cachent un cœur
-    { civilian:'Yato', undercover:'Hiei', anime1:'Noragami', anime2:'Yu Yu Hakusho', hint:'Esprits sombres et rapides au cœur insoupçonné' },
-    // Deux inventeurs fous du temps/dimension, monologue intérieur de génie, incompris de tous
-    { civilian:'Rintaro Okabe', undercover:'Senku Ishigami', anime1:'Steins;Gate', anime2:'Dr. Stone', hint:'Génies scientifiques dramatiques qui sauvent l\'humanité' },
-    // Deux magical girls contrairement au cliché, uniforme sombre, pouvoirs lourds à porter
-    { civilian:'Homura Akemi', undercover:'Satsuki Kiryuin', anime1:'Puella Magi Madoka', anime2:'Kill la Kill', hint:'Guerrières froides au plan sacrificiel secret' },
-    // Deux protagonistes JoJo au calme intimidant, étudiants en apparence
-    { civilian:'Jotaro Kujo', undercover:'Giorno Giovanna', anime1:'JoJo Part 3', anime2:'JoJo Part 5', hint:'Protagonistes JoJo au calme glacial et au style parfait' },
-    // Deux génies solitaires du jeu, capables de tout retourner seuls
-    { civilian:'Sora', undercover:'Ayanokoji Kiyotaka', anime1:'No Game No Life', anime2:'Classroom of the Elite', hint:'Génies qui jouent à perdre pour mieux gagner' },
-    // Deux combattants petits mais hyper rapides, armés de lames, regard vide
-    { civilian:'Levi Ackerman', undercover:'Zoro', anime1:'Attack on Titan', anime2:'One Piece', hint:'Combattants à la lame les plus forts de leur équipe' },
-    // Deux figures paternelles brisées, force monstrueuse, portent le deuil de quelqu'un
-    { civilian:'Guts', undercover:'Thorfinn', anime1:'Berserk', anime2:'Vinland Saga', hint:'Guerriers nordiques/médiévaux consumés par la vengeance' },
-    // Deux antagonistes au sourire bienveillant qui cache l'horreur
-    { civilian:'Griffith', undercover:'Mahito', anime1:'Berserk', anime2:'Jujutsu Kaisen', hint:'Beaux visages qui dissimulent un vide total d\'humanité' },
-    // Deux filles magiques légères qui cachent une puissance catastrophique
-    { civilian:'Usagi Tsukino', undercover:'Nanoha Takamachi', anime1:'Sailor Moon', anime2:'Magical Girl Lyrical Nanoha', hint:'Magical girls au canon surpuissant et au cœur d\'or' },
-  ]
-};
-
-// Generate blocked words from character name (normalized tokens)
-function getBlockedWords(name) {
-  if (!name) return [];
-  return name.toLowerCase()
-    .replace(/[^a-zàâäéèêëîïôùûü\s]/gi, '')
-    .split(/\s+/)
-    .filter(w => w.length > 2);
-}
-
-
-// ═══════════════════════════════
-//  CHARACTER IMAGES MAP
-// ═══════════════════════════════
-const CHARACTER_IMAGES = {
-  'Naruto Uzumaki': 'https://cdn.myanimelist.net/images/characters/2/284121.jpg',
-  'Izuku Midoriya': 'https://cdn.myanimelist.net/images/characters/5/312676.jpg',
-  'Tanjiro Kamado': 'https://cdn.myanimelist.net/images/characters/3/418268.jpg',
-  'Yusuke Urameshi': 'https://cdn.myanimelist.net/images/characters/13/68953.jpg',
-  'Sasuke Uchiha': 'https://cdn.myanimelist.net/images/characters/9/131317.jpg',
-  'Vegeta': 'https://cdn.myanimelist.net/images/characters/4/253393.jpg',
-  'Levi Ackerman': 'https://cdn.myanimelist.net/images/characters/2/241413.jpg',
-  'Killua Zoldyck': 'https://cdn.myanimelist.net/images/characters/7/171471.jpg',
-  'Monkey D. Luffy': 'https://cdn.myanimelist.net/images/characters/9/310307.jpg',
-  'Gon Freecss': 'https://cdn.myanimelist.net/images/characters/11/174517.jpg',
-  'Gojo Satoru': 'https://cdn.myanimelist.net/images/characters/8/450358.jpg',
-  'Saitama': 'https://cdn.myanimelist.net/images/characters/11/207828.jpg',
-  'Eren Yeager': 'https://cdn.myanimelist.net/images/characters/10/108914.jpg',
-  'Kaneki Ken': 'https://cdn.myanimelist.net/images/characters/6/264525.jpg',
-  'Itachi Uchiha': 'https://cdn.myanimelist.net/images/characters/15/72554.jpg',
-  'Aizen Sosuke': 'https://cdn.myanimelist.net/images/characters/4/15631.jpg',
-  'Yuji Itadori': 'https://cdn.myanimelist.net/images/characters/8/448083.jpg',
-  'Denji': 'https://cdn.myanimelist.net/images/characters/10/471020.jpg',
-  'Edward Elric': 'https://cdn.myanimelist.net/images/characters/11/174118.jpg',
-  'Asta': 'https://cdn.myanimelist.net/images/characters/4/357434.jpg',
-  'Ryomen Sukuna': 'https://cdn.myanimelist.net/images/characters/7/448084.jpg',
-  'Muzan Kibutsuji': 'https://cdn.myanimelist.net/images/characters/13/418271.jpg',
-  'Natsu Dragneel': 'https://cdn.myanimelist.net/images/characters/8/131067.jpg',
-  'Portgas D. Ace': 'https://cdn.myanimelist.net/images/characters/7/84638.jpg',
-  'Kakashi Hatake': 'https://cdn.myanimelist.net/images/characters/7/284122.jpg',
-  'Aizawa Shouta': 'https://cdn.myanimelist.net/images/characters/9/312677.jpg',
-  'Kirito': 'https://cdn.myanimelist.net/images/characters/7/204821.jpg',
-  'Bell Cranel': 'https://cdn.myanimelist.net/images/characters/8/272225.jpg',
-  'Subaru Natsuki': 'https://cdn.myanimelist.net/images/characters/7/321076.jpg',
-  'Naofumi Iwatani': 'https://cdn.myanimelist.net/images/characters/13/399793.jpg',
-  'Ainz Ooal Gown': 'https://cdn.myanimelist.net/images/characters/11/311898.jpg',
-  'Lelouch vi Britannia': 'https://cdn.myanimelist.net/images/characters/8/76655.jpg',
-  'Zero Two': 'https://cdn.myanimelist.net/images/characters/8/399332.jpg',
-  'Violet Evergarden': 'https://cdn.myanimelist.net/images/characters/10/380395.jpg',
-  'Rudeus Greyrat': 'https://cdn.myanimelist.net/images/characters/15/430591.jpg',
-  'Rimuru Tempest': 'https://cdn.myanimelist.net/images/characters/15/388376.jpg',
-  'Holo': 'https://cdn.myanimelist.net/images/characters/11/76340.jpg',
-  'Raphtalia': 'https://cdn.myanimelist.net/images/characters/11/399795.jpg',
-  'Shiroe': 'https://cdn.myanimelist.net/images/characters/2/255047.jpg',
-  'Sora': 'https://cdn.myanimelist.net/images/characters/10/265968.jpg',
-  'Rem': 'https://cdn.myanimelist.net/images/characters/13/321079.jpg',
-  'Aqua': 'https://cdn.myanimelist.net/images/characters/13/298097.jpg',
-  'Saber': 'https://cdn.myanimelist.net/images/characters/2/11389.jpg',
-  'Erza Scarlet': 'https://cdn.myanimelist.net/images/characters/3/131068.jpg',
-  'Kazuma Sato': 'https://cdn.myanimelist.net/images/characters/12/298096.jpg',
-  'Hajime Nagumo': 'https://cdn.myanimelist.net/images/characters/8/435578.jpg',
-  'L Lawliet': 'https://cdn.myanimelist.net/images/characters/8/261785.jpg',
-  'Shikamaru Nara': 'https://cdn.myanimelist.net/images/characters/7/74918.jpg',
-  'Griffith': 'https://cdn.myanimelist.net/images/characters/9/91465.jpg',
-  'Zoro': 'https://cdn.myanimelist.net/images/characters/3/100534.jpg',
-  'Guts': 'https://cdn.myanimelist.net/images/characters/10/91462.jpg',
-  'Shigaraki Tomura': 'https://cdn.myanimelist.net/images/characters/3/312678.jpg',
-  'Megumi Fushiguro': 'https://cdn.myanimelist.net/images/characters/6/448086.jpg',
-  'Byakuya Kuchiki': 'https://cdn.myanimelist.net/images/characters/9/15632.jpg',
-  'Roy Mustang': 'https://cdn.myanimelist.net/images/characters/7/174119.jpg',
-  'Endeavor': 'https://cdn.myanimelist.net/images/characters/11/312679.jpg',
-  'Mikasa Ackerman': 'https://cdn.myanimelist.net/images/characters/9/108913.jpg',
-  'Motoko Kusanagi': 'https://cdn.myanimelist.net/images/characters/4/57938.jpg',
-  'Giyu Tomioka': 'https://cdn.myanimelist.net/images/characters/8/418269.jpg',
-  'Neji Hyuga': 'https://cdn.myanimelist.net/images/characters/8/68954.jpg',
-  'Mob': 'https://cdn.myanimelist.net/images/characters/6/320019.jpg',
-  'Tatsumaki': 'https://cdn.myanimelist.net/images/characters/15/207829.jpg',
-  'Accelerator': 'https://cdn.myanimelist.net/images/characters/14/131789.jpg',
-  'Hisoka Morow': 'https://cdn.myanimelist.net/images/characters/14/80554.jpg',
-  'Taiga Aisaka': 'https://cdn.myanimelist.net/images/characters/9/122398.jpg',
-  'Erina Nakiri': 'https://cdn.myanimelist.net/images/characters/9/273614.jpg',
-  'Hachiman Hikigaya': 'https://cdn.myanimelist.net/images/characters/4/245851.jpg',
-  'Rei Kiriyama': 'https://cdn.myanimelist.net/images/characters/7/320023.jpg',
-  'Kousei Arima': 'https://cdn.myanimelist.net/images/characters/10/272469.jpg',
-  'Shinichi Chiaki': 'https://cdn.myanimelist.net/images/characters/5/52435.jpg',
-  'Shouko Nishimiya': 'https://cdn.myanimelist.net/images/characters/10/349230.jpg',
-  'Mei Tachibana': 'https://cdn.myanimelist.net/images/characters/10/193695.jpg',
-  'Shoya Ishida': 'https://cdn.myanimelist.net/images/characters/9/349229.jpg',
-  'Takeo Goda': 'https://cdn.myanimelist.net/images/characters/3/280736.jpg',
-  'Kaori Miyazono': 'https://cdn.myanimelist.net/images/characters/11/272468.jpg',
-  'Menma': 'https://cdn.myanimelist.net/images/characters/8/197019.jpg',
-  'Tohru Honda': 'https://cdn.myanimelist.net/images/characters/3/54558.jpg',
-  'Oreki Houtarou': 'https://cdn.myanimelist.net/images/characters/9/212258.jpg',
-  'Miyamura Izumi': 'https://cdn.myanimelist.net/images/characters/5/435577.jpg',
-  'Nishikata': 'https://cdn.myanimelist.net/images/characters/13/395586.jpg',
-  'Yor Forger': 'https://cdn.myanimelist.net/images/characters/5/481066.jpg',
-  'Himeno': 'https://cdn.myanimelist.net/images/characters/5/471021.jpg',
-  'Kaguya Shinomiya': 'https://cdn.myanimelist.net/images/characters/5/409841.jpg',
-  'Yukino Yukinoshita': 'https://cdn.myanimelist.net/images/characters/10/245852.jpg',
-  'Shoyo Hinata': 'https://cdn.myanimelist.net/images/characters/5/262849.jpg',
-  'Tetsuya Kuroko': 'https://cdn.myanimelist.net/images/characters/8/223797.jpg',
-  'Tobio Kageyama': 'https://cdn.myanimelist.net/images/characters/7/262850.jpg',
-  'Seijuro Akashi': 'https://cdn.myanimelist.net/images/characters/5/223800.jpg',
-  'Yoichi Isagi': 'https://cdn.myanimelist.net/images/characters/5/476940.jpg',
-  'Ryota Kise': 'https://cdn.myanimelist.net/images/characters/12/223798.jpg',
-  'Ippo Makunouchi': 'https://cdn.myanimelist.net/images/characters/13/49966.jpg',
-  'Joe Yabuki': 'https://cdn.myanimelist.net/images/characters/12/57939.jpg',
-  'Ryoma Echizen': 'https://cdn.myanimelist.net/images/characters/4/24156.jpg',
-  'Eiichirou Maruo': 'https://cdn.myanimelist.net/images/characters/12/273615.jpg',
-  'Takenori Akagi': 'https://cdn.myanimelist.net/images/characters/10/40556.jpg',
-  'Ushijima Wakatoshi': 'https://cdn.myanimelist.net/images/characters/11/262851.jpg',
-  'Eijun Sawamura': 'https://cdn.myanimelist.net/images/characters/6/262852.jpg',
-  'Furuya Satoru': 'https://cdn.myanimelist.net/images/characters/4/270391.jpg',
-  'Light Yagami': 'https://cdn.myanimelist.net/images/characters/9/261784.jpg',
-  'Jotaro Kujo': 'https://cdn.myanimelist.net/images/characters/7/53397.jpg',
-  'Giorno Giovanna': 'https://cdn.myanimelist.net/images/characters/9/53398.jpg',
-  'Spike Spiegel': 'https://cdn.myanimelist.net/images/characters/8/57940.jpg',
-  'Vash the Stampede': 'https://cdn.myanimelist.net/images/characters/10/57941.jpg',
-  'Thorfinn': 'https://cdn.myanimelist.net/images/characters/11/400855.jpg',
-  'Senku Ishigami': 'https://cdn.myanimelist.net/images/characters/9/399792.jpg',
-  'Ayanokoji Kiyotaka': 'https://cdn.myanimelist.net/images/characters/14/357435.jpg',
-  'Rintaro Okabe': 'https://cdn.myanimelist.net/images/characters/5/121598.jpg',
-  'Makoto Naegi': 'https://cdn.myanimelist.net/images/characters/13/212259.jpg',
-  'Shinji Ikari': 'https://cdn.myanimelist.net/images/characters/5/23821.jpg',
-  'Homura Akemi': 'https://cdn.myanimelist.net/images/characters/11/180013.jpg',
-  'Usagi Tsukino': 'https://cdn.myanimelist.net/images/characters/9/57942.jpg',
-  'Nanoha Takamachi': 'https://cdn.myanimelist.net/images/characters/9/34901.jpg',
-  'Satsuki Kiryuin': 'https://cdn.myanimelist.net/images/characters/4/255961.jpg',
-  'Yato': 'https://cdn.myanimelist.net/images/characters/14/275273.jpg',
-  'Revy': 'https://cdn.myanimelist.net/images/characters/7/57943.jpg',
-  'Mahito': 'https://cdn.myanimelist.net/images/characters/4/448087.jpg',
-  'Hiei': 'https://cdn.myanimelist.net/images/characters/12/68955.jpg',
-  'Hanamichi Sakuragi': 'https://cdn.myanimelist.net/images/characters/7/40557.jpg',
-  'Noya Libero': 'https://cdn.myanimelist.net/images/characters/8/262853.jpg',
-  'Reo Mikage': 'https://cdn.myanimelist.net/images/characters/7/476941.jpg',
-  'Seishiro Nagi': 'https://cdn.myanimelist.net/images/characters/8/476942.jpg',
-  'Wataru Kuramochi': 'https://cdn.myanimelist.net/images/characters/5/270392.jpg',
-  'Yuri Katsuki': 'https://cdn.myanimelist.net/images/characters/9/335669.jpg',
-};
-
-function getRandomPair(genre) {
-  const list = PAIRS[genre] || PAIRS.mix;
-  return { ...list[Math.floor(Math.random() * list.length)] };
-}
-
-// ═══════════════════════════════
-//  ROOMS
-// ═══════════════════════════════
-const rooms = {};
-const timers = {}; // code -> setInterval ref
-
-function genCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
-}
-
-function sanitizeRoom(room) {
-  const r = { ...room, players: {}, spectators: room.spectators || [], turnOrder: room.turnOrder || [], currentTurnIndex: room.currentTurnIndex ?? 0 };
-  for (const [n, p] of Object.entries(room.players)) {
-    r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready, voted: p.voted, isSpectator: p.isSpectator || false, isBot: p.isBot || false };
-  }
-  return r;
-}
-
-function broadcastRoom(code) {
-  if (!rooms[code]) return;
-  io.to(code).emit('room:update', sanitizeRoom(rooms[code]));
-}
-
-function getAlive(room) {
-  return Object.entries(room.players).filter(([,p]) => !p.eliminated && p.connected).map(([n]) => n);
-}
-
-function findSocket(name, code) {
-  return [...io.sockets.sockets.values()].find(s => s.data?.name === name && s.data?.code === code);
-}
-
-// ═══════════════════════════════
-//  TIMER
-// ═══════════════════════════════
-const WORD_TIMER_SECS = 45;
-const VOTE_TIMER_SECS = 60;
-
-function startTimer(code, seconds, phase) {
-  clearTimer(code);
-  const room = rooms[code];
-  if (!room) return;
-  room.timerEnd = Date.now() + seconds * 1000;
-  room.timerPhase = phase;
-  broadcastRoom(code);
-
-  timers[code] = setTimeout(() => {
-    const r = rooms[code];
-    if (!r) return;
-    if (phase === 'words') {
-      // Timer expired for current player — auto-submit '…' and advance turn
-      const rk = `round${r.round}`;
-      if (!r.words[rk]) r.words[rk] = {};
-      const aliveTurnOrder = r.turnOrder.filter(n => !r.players[n]?.eliminated && r.players[n]?.connected);
-      const currentPlayer = aliveTurnOrder[r.currentTurnIndex % aliveTurnOrder.length];
-      if (currentPlayer && !r.words[rk][currentPlayer]) {
-        r.words[rk][currentPlayer] = '…';
-        io.to(code).emit('word:revealed', { player: currentPlayer, word: '…', round: r.round });
-      }
-      r.currentTurnIndex++;
-      const allDone = aliveTurnOrder.every(n => r.words[rk][n]);
-      if (allDone) {
-        const votingLocked = r.round < (r.votingUnlockedAtRound || 2);
-        if (votingLocked) {
-          io.to(code).emit('toast', `Tour ${r.round} terminé — tour ${r.round + 1} !`);
-          broadcastRoom(code);
-          setTimeout(() => nextRound(r, code), 1400);
-        } else {
-          r.subPhase = 'vote';
-          broadcastRoom(code);
-          scheduleBotVotes(r, code);
-          startTimer(code, VOTE_TIMER_SECS, 'vote');
-        }
-      } else {
-        const nextPlayer = aliveTurnOrder[r.currentTurnIndex % aliveTurnOrder.length];
-        broadcastRoom(code);
-        io.to(code).emit('turn:next', { player: nextPlayer });
-        startTimer(code, WORD_TIMER_SECS, 'words');
-      }
-    } else if (phase === 'vote') {
-      // Auto-eliminate highest voted or random alive
-      const alive = getAlive(r);
-      const voteCount = {};
-      alive.forEach(n => { voteCount[n] = 0; });
-      Object.values(r.votes?.[`round${r.round}`] || {}).forEach(t => { if (voteCount[t] !== undefined) voteCount[t]++; });
-      const sorted = alive.sort((a, b) => (voteCount[b]||0) - (voteCount[a]||0));
-      if (sorted[0]) eliminatePlayer(r, sorted[0], code);
-    }
-  }, seconds * 1000);
-}
-
-function clearTimer(code) {
-  if (timers[code]) { clearTimeout(timers[code]); delete timers[code]; }
-}
-
-// ═══════════════════════════════
-//  CHARACTER IMAGES (hardcoded)
-// ═══════════════════════════════
-function fetchCharImage(charName) {
-  return CHARACTER_IMAGES[charName] || null;
-}
-
-// ═══════════════════════════════
-//  HEALTH + PING (anti-sleep)
-// ═══════════════════════════════
-app.get('/', (_, res) => res.send('Undercover Anime Backend OK ✅'));
-app.get('/ping', (_, res) => res.json({ ok: true, ts: Date.now() }));
-
-// ═══════════════════════════════
-//  SOCKET
-// ═══════════════════════════════
-io.on('connection', (socket) => {
-
-  socket.on('room:create', ({ name, genre, mrWhite, doubleUndercover, wordTimer }) => {
-    let code; do { code = genCode(); } while (rooms[code]);
-    rooms[code] = {
-      code, genre, host: name,
-      phase: 'lobby',
-      settings: { mrWhite: !!mrWhite, doubleUndercover: !!doubleUndercover, wordTimer: wordTimer !== false },
-      players: { [name]: { socketId: socket.id, connected: true, eliminated: false, ready: false, voted: false, isSpectator: false } },
-      spectators: [],
-      assignments: {}, wordPair: null,
-      round: 1, words: {}, votes: {}, accusations: {},
-      subPhase: 'words',
-      mrWhiteGuessPhase: false,
-      scores: {},
-      timerEnd: null, timerPhase: null,
-      countdown: null,
+async function voiceGetStream(){
+  if(Voice.stream){ Voice.stream.getTracks().forEach(t=>t.stop()); Voice.stream=null; }
+  try {
+    const constraints = { audio: Voice.selectedDeviceId
+      ? { deviceId: { exact: Voice.selectedDeviceId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     };
-    socket.join(code); socket.data = { name, code, isSpectator: false };
-    socket.emit('room:joined', { code, name, isHost: true });
-    broadcastRoom(code);
-  });
+    Voice.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    // Mute state
+    Voice.stream.getAudioTracks().forEach(t => t.enabled = !Voice.muted);
+    // Reload device list (labels now available after permission)
+    voiceLoadDevices();
+    // VU meter
+    voiceStartVU();
+    return true;
+  } catch(e){
+    toast('Micro inaccessible : '+(e.name||e),'err');
+    return false;
+  }
+}
 
-  socket.on('room:join', ({ name, code, asSpectator }) => {
-    const room = rooms[code];
-    if (!room) return socket.emit('error', 'Salle introuvable !');
-    if (room.players[name]?.connected) return socket.emit('error', 'Ce prénom est déjà pris !');
+// ── VU meter (my mic) ──────────────────────────────────
 
-    // Join mid-game as spectator
-    if (room.phase !== 'lobby' && !asSpectator) {
-      // Offer spectator mode
-      return socket.emit('spectator:offer', { code, name });
-    }
-
-    const isSpectator = asSpectator || room.phase !== 'lobby';
-    room.players[name] = { socketId: socket.id, connected: true, eliminated: isSpectator, ready: isSpectator, voted: false, isSpectator };
-    if (isSpectator && !room.spectators) room.spectators = [];
-    if (isSpectator) room.spectators.push(name);
-    socket.join(code); socket.data = { name, code, isSpectator };
-    socket.emit('room:joined', { code, name, isHost: false, isSpectator });
-    if (isSpectator) socket.emit('spectator:joined', { message: 'Tu observes la partie en cours !' });
-    broadcastRoom(code);
-    io.to(code).emit('toast', isSpectator ? `👁 ${name} observe la partie` : `${name} a rejoint !`);
-  });
-
-  socket.on('disconnect', () => {
-    const disconnectedSocketId = socket.id;
-    const { name, code } = socket.data || {};
-    if (!name || !code) return;
-    // Grace period: 4s before marking disconnected (handles brief reconnects during countdown)
-    setTimeout(() => {
-      const r = rooms[code];
-      if (!r || !r.players[name]) return;
-      // If player reconnected with a new socket already, skip
-      const current = findSocket(name, code);
-      if (current && current.id !== disconnectedSocketId) return;
-      r.players[name].connected = false;
-      if (r.host === name && r.phase === 'lobby') {
-        const other = Object.entries(r.players).find(([n,p]) => n !== name && p.connected && !p.isBot);
-        if (other) { r.host = other[0]; findSocket(other[0], code)?.emit('room:promoted', { isHost: true }); }
-        else { clearTimer(code); delete rooms[code]; return; }
+function voiceStartVU(){
+  if(!AC || !Voice.stream) return;
+  if(Voice.analyser) voiceStopVU();
+  try {
+    Voice.analyser = AC.createAnalyser();
+    Voice.analyser.fftSize = 512;
+    Voice.vuSource = AC.createMediaStreamSource(Voice.stream);
+    Voice.vuSource.connect(Voice.analyser);
+    const buf = new Uint8Array(Voice.analyser.frequencyBinCount);
+    const fill = document.getElementById('vp-vu-fill');
+    Voice.vuInterval = setInterval(()=>{
+      if(!Voice.analyser) return;
+      Voice.analyser.getByteFrequencyData(buf);
+      const avg = buf.reduce((a,b)=>a+b,0)/buf.length;
+      const pct = Math.min(100, avg * 2.5);
+      if(fill) fill.style.width = pct + '%';
+      const speaking = pct > 8 && !Voice.muted;
+      if(speaking !== Voice.speaking){
+        Voice.speaking = speaking;
+        voiceUpdateBtn();
       }
-      broadcastRoom(code);
-      io.to(code).emit('toast', `${name} s'est déconnecté`);
-    }, 4000);
-  });
+    }, 60);
+  } catch(e){ console.warn('VU', e); }
+}
 
-  socket.on('room:reconnect', ({ name, code }) => {
-    const room = rooms[code];
-    if (!room || !room.players[name]) return socket.emit('error', 'Session introuvable');
-    room.players[name].socketId = socket.id;
-    room.players[name].connected = true;
-    socket.join(code); socket.data = { name, code, isSpectator: room.players[name].isSpectator };
-    socket.emit('room:joined', { code, name, isHost: room.host === name, isSpectator: room.players[name].isSpectator });
-    if (room.assignments?.[name]) socket.emit('your:assignment', room.assignments[name]);
-    // Restore vote state
-    const rk = `round${room.round}`;
-    const myVote = room.votes?.[rk]?.[name];
-    if (myVote) socket.emit('vote:restore', { target: myVote });
-    broadcastRoom(code);
-    io.to(code).emit('toast', `${name} est de retour !`);
-  });
+function voiceStopVU(){
+  clearInterval(Voice.vuInterval); Voice.vuInterval = null;
+  try { Voice.vuSource?.disconnect(); } catch{}
+  Voice.analyser = null; Voice.vuSource = null;
+}
 
-  socket.on('player:kick', ({ target }) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.host !== name) return;
-    const ts = findSocket(target, code);
-    if (ts) { ts.emit('kicked', 'Tu as été expulsé'); ts.leave(code); ts.data = {}; }
-    delete room.players[target];
-    broadcastRoom(code);
-    io.to(code).emit('toast', `${target} a été expulsé`);
-  });
+// ── Join / Leave ───────────────────────────────────────
 
-  socket.on('room:leave', () => {
-    const { name, code } = socket.data || {};
-    if (!name || !code || !rooms[code]) return;
-    const room = rooms[code];
-    delete room.players[name]; socket.leave(code); socket.data = {};
-    if (Object.keys(room.players).length === 0) { clearTimer(code); delete rooms[code]; return; }
-    if (room.host === name) {
-      const next = Object.entries(room.players).find(([,p]) => p.connected);
-      if (next) { room.host = next[0]; findSocket(next[0], code)?.emit('room:promoted', { isHost: true }); }
+async function joinVoice(){
+  if(Voice.active){ leaveVoice(); return; }
+  const ok = await voiceGetStream();
+  if(!ok) return;
+  Voice.active = true;
+  Voice.muted = false;
+  socket.emit('rtc:ready');
+  voiceUpdateBtn();
+  voiceRenderPanel();
+  toast('Vocal activé 🎙️','ok');
+}
+
+function leaveVoice(){
+  if(!Voice.active) return;
+  socket.emit('rtc:leave');
+  // Close all peer connections
+  for(const [name] of Object.entries(Voice.peers)) voiceClosePeer(name);
+  Voice.peers = {};
+  voiceStopVU();
+  if(Voice.stream){ Voice.stream.getTracks().forEach(t=>t.stop()); Voice.stream=null; }
+  Voice.active = false;
+  Voice.speaking = false;
+  voiceUpdateBtn();
+  voiceRenderPanel();
+  toast('Vocal désactivé','warn');
+}
+
+function toggleMyMic(){
+  if(!Voice.active){ joinVoice(); return; }
+  Voice.muted = !Voice.muted;
+  if(Voice.stream) Voice.stream.getAudioTracks().forEach(t => t.enabled = !Voice.muted);
+  voiceUpdateBtn();
+  voiceRenderPanel();
+  toast(Voice.muted ? '🔇 Micro coupé' : '🎙️ Micro activé');
+}
+
+// ── Peer connections ───────────────────────────────────
+
+function voiceGetOrCreatePeer(remoteName){
+  if(Voice.peers[remoteName]) return Voice.peers[remoteName];
+  const pc = new RTCPeerConnection(STUN);
+  const peer = { pc, gainNode: null, audioEl: null, muted: false, speaking: false };
+  Voice.peers[remoteName] = peer;
+
+  // Add my tracks
+  if(Voice.stream) Voice.stream.getTracks().forEach(t => pc.addTrack(t, Voice.stream));
+
+  // Remote track → audio element with GainNode
+  pc.ontrack = (e) => {
+    if(peer.audioEl) return; // already set up
+    const ctx = AC || new AudioContext();
+    const src = ctx.createMediaStreamSource(new MediaStream([e.track]));
+    const gain = ctx.createGain();
+    gain.gain.value = Voice.remoteVolume[remoteName] ?? 1.0;
+    src.connect(gain); gain.connect(ctx.destination);
+    peer.gainNode = gain;
+    // Also feed a muted audio element for browser autoplay compat
+    const el = new Audio();
+    el.srcObject = new MediaStream([e.track]);
+    el.muted = true; // we use Web Audio instead
+    el.play().catch(()=>{});
+    peer.audioEl = el;
+    // Apply local mute
+    gain.gain.value = (Voice.remoteMuted[remoteName] || peer.muted) ? 0 : (Voice.remoteVolume[remoteName] ?? 1.0);
+    // Speaking detection on remote
+    voiceWatchRemoteSpeaking(remoteName, e.track);
+    voiceRenderPanel();
+  };
+
+  pc.onicecandidate = (e) => {
+    if(e.candidate) socket.emit('rtc:ice', { to: remoteName, candidate: e.candidate });
+  };
+
+  pc.onconnectionstatechange = () => {
+    if(['failed','disconnected','closed'].includes(pc.connectionState)){
+      voiceClosePeer(remoteName);
+      voiceRenderPanel();
     }
-    broadcastRoom(code);
-    io.to(code).emit('toast', `${name} a quitté`);
-  });
+  };
 
-  // ── ACCUSATION ──
-  socket.on('player:accuse', ({ target }) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.phase !== 'playing') return;
-    if (room.players[name]?.eliminated) return;
-    const rk = `round${room.round}`;
-    if (!room.accusations[rk]) room.accusations[rk] = {};
-    room.accusations[rk][name] = target;
-    io.to(code).emit('player:accused', { accuser: name, target });
-    broadcastRoom(code);
-  });
+  return peer;
+}
 
-  // ── START GAME (with countdown) ──
-  socket.on('game:start', async ({ genre, settings }) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.host !== name) return;
+function voiceClosePeer(name){
+  const peer = Voice.peers[name];
+  if(!peer) return;
+  try { peer.pc?.close(); } catch{}
+  try { peer.audioEl?.pause(); } catch{}
+  delete Voice.peers[name];
+}
 
-    // Countdown 3-2-1
-    io.to(code).emit('game:countdown', 3);
-    await new Promise(r => setTimeout(r, 1000));
-    io.to(code).emit('game:countdown', 2);
-    await new Promise(r => setTimeout(r, 1000));
-    io.to(code).emit('game:countdown', 1);
-    await new Promise(r => setTimeout(r, 1000));
-    io.to(code).emit('game:countdown', 0);
+async function voiceCallPeer(remoteName){
+  if(!Voice.active || !Voice.stream) return;
+  const peer = voiceGetOrCreatePeer(remoteName);
+  try {
+    const offer = await peer.pc.createOffer();
+    await peer.pc.setLocalDescription(offer);
+    socket.emit('rtc:offer', { to: remoteName, offer });
+  } catch(e){ console.warn('voiceCallPeer', e); }
+}
 
-    io.to(code).emit('loading', true);
-
-    const g = genre || room.genre;
-    const s = settings || room.settings;
-    room.settings = s;
-
-    const pair = getRandomPair(g);
-    const img1 = fetchCharImage(pair.civilian);
-    const img2 = fetchCharImage(pair.undercover);
-    pair.civilianImg = img1;
-    pair.undercoverImg = img2;
-
-    const players = Object.keys(room.players).filter(p => room.players[p].connected && !room.players[p].isSpectator);
-    const shuffled = [...players].sort(() => Math.random() - .5);
-
-    const assignments = {};
-    let ucCount = (s.doubleUndercover && players.length >= 6) ? 2 : 1;
-    let mrwSet = false;
-
-    shuffled.forEach((p, i) => {
-      if (i < ucCount) {
-        assignments[p] = { role:'undercover', word:pair.undercover, image:pair.undercoverImg, blockedWords:getBlockedWords(pair.undercover) };
-      } else if (!mrwSet && s.mrWhite && players.length >= 5) {
-        mrwSet = true;
-        assignments[p] = { role:'mr-white', word:null, image:null, blockedWords:[] };
-      } else {
-        assignments[p] = { role:'civilian', word:pair.civilian, image:pair.civilianImg, blockedWords:getBlockedWords(pair.civilian) };
+// Remote speaking detection
+function voiceWatchRemoteSpeaking(name, track){
+  if(!AC) return;
+  try {
+    const src = AC.createMediaStreamSource(new MediaStream([track]));
+    const an = AC.createAnalyser(); an.fftSize = 256;
+    src.connect(an);
+    const buf = new Uint8Array(an.frequencyBinCount);
+    setInterval(()=>{
+      an.getByteFrequencyData(buf);
+      const avg = buf.reduce((a,b)=>a+b,0)/buf.length;
+      const speaking = avg > 6;
+      if(Voice.peers[name] && speaking !== Voice.peers[name].speaking){
+        Voice.peers[name].speaking = speaking;
+        // update ring in panel
+        const ring = document.querySelector(`[data-peer="${name}"] .vp-speaking-ring`);
+        if(ring) ring.classList.toggle('active', speaking);
       }
-    });
+    }, 80);
+  } catch{}
+}
 
-    players.forEach(p => { if (!room.scores[p]) room.scores[p] = { wins: 0 }; });
+// ── Render panel ───────────────────────────────────────
 
-    room.wordPair = pair; room.assignments = assignments;
-    room.phase = 'reveal'; room.round = 1; room.words = {}; room.votes = {}; room.accusations = {};
-    room.subPhase = 'words'; room.mrWhiteGuessPhase = false;
-    room.turnOrder = shuffled; // random order locked at game start — only alive non-spectator players
-    room.currentTurnIndex = 0;  // whose turn it is within turnOrder
-    room.votingUnlockedAtRound = 2; // vote only available from round 2
-    Object.keys(room.players).forEach(p => { room.players[p].ready = room.players[p].isSpectator || room.players[p].isBot || false; room.players[p].voted = false; });
+function voiceRenderPanel(){
+  if(!Voice.panelOpen) return;
+  const dot = document.getElementById('vp-dot');
+  dot.classList.toggle('live', Voice.active);
 
-    shuffled.forEach(pName => { findSocket(pName, code)?.emit('your:assignment', assignments[pName]); });
-
-    io.to(code).emit('loading', false);
-    broadcastRoom(code);
-  });
-
-  // ── PLAYER READY ──
-  socket.on('player:ready', () => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room) return;
-    room.players[name].ready = true;
-    broadcastRoom(code);
-    const connected = Object.entries(room.players).filter(([,p]) => p.connected && !p.eliminated);
-    if (connected.every(([,p]) => p.ready) && room.phase === 'reveal') {
-      room.phase = 'playing';
-      room.subPhase = 'words';
-      room.currentTurnIndex = 0;
-      broadcastRoom(code);
-      const firstPlayer = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected)[0];
-      if (firstPlayer) io.to(code).emit('turn:next', { player: firstPlayer });
-      // Bots are always "ready" — if first player is a bot, schedule its turn
-      if (firstPlayer && room.players[firstPlayer]?.isBot) {
-        scheduleBotTurn(room, code, firstPlayer);
-      } else if (room.settings.wordTimer) {
-        startTimer(code, WORD_TIMER_SECS, 'words');
-      }
-    }
-  });
-
-  // ── SUBMIT WORD ──
-  socket.on('word:submit', ({ word }) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.phase !== 'playing' || room.subPhase !== 'words') return;
-
-    const rk = `round${room.round}`;
-    if (!room.words[rk]) room.words[rk] = {};
-    if (room.words[rk][name]) return; // already submitted
-
-    // Enforce turn order — only the current active player can submit
-    const aliveTurnOrder = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected);
-    const currentPlayer = aliveTurnOrder[room.currentTurnIndex % aliveTurnOrder.length];
-    if (name !== currentPlayer) {
-      socket.emit('error', `C'est le tour de ${currentPlayer} !`);
-      return;
-    }
-
-    const trimmed = word.trim().substring(0, 40);
-
-    // Check blocked words
-    const myAssignment = room.assignments[name];
-    const blocked = myAssignment?.blockedWords || [];
-    const wordLower = trimmed.toLowerCase().replace(/[^a-zàâäéèêëîïôùûü]/gi, '');
-    const isBlocked = blocked.some(b => wordLower.includes(b) || b.includes(wordLower));
-
-    if (isBlocked) {
-      socket.emit('word:blocked', { word: trimmed });
-      io.to(code).emit('toast', `🚫 ${name} a dit le nom du perso — éliminé !`);
-      // Advance turn before eliminating
-      room.currentTurnIndex++;
-      eliminatePlayer(room, name, code);
-      return;
-    }
-
-    room.words[rk][name] = trimmed;
-    clearTimer(code); // clear per-player timer
-
-    // Broadcast the word to everyone
-    io.to(code).emit('word:revealed', { player: name, word: trimmed, round: room.round });
-
-    // Advance turn
-    room.currentTurnIndex++;
-    const newAliveTurnOrder = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected);
-    const allDone = newAliveTurnOrder.every(n => room.words[rk][n]);
-
-    if (allDone) {
-      // Everyone has spoken this round
-      const votingLocked = room.round < (room.votingUnlockedAtRound || 2);
-      if (votingLocked) {
-        io.to(code).emit('toast', `Tour ${room.round} terminé — tour ${room.round + 1} !`);
-        broadcastRoom(code);
-        setTimeout(() => nextRound(room, code), 1400);
-      } else {
-        room.subPhase = 'vote';
-        Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
-        broadcastRoom(code);
-        scheduleBotVotes(room, code);
-        if (room.settings.wordTimer) startTimer(code, VOTE_TIMER_SECS, 'vote');
-      }
-    } else {
-      // Notify who is next
-      const nextPlayer = newAliveTurnOrder[room.currentTurnIndex % newAliveTurnOrder.length];
-      broadcastRoom(code);
-      io.to(code).emit('turn:next', { player: nextPlayer });
-      // If next player is a bot, schedule its turn; else start timer
-      if (room.players[nextPlayer]?.isBot) {
-        scheduleBotTurn(room, code, nextPlayer);
-      } else if (room.settings.wordTimer) {
-        startTimer(code, WORD_TIMER_SECS, 'words');
-      }
-    }
-  });
-
-  // ── CAST VOTE ──
-  socket.on('vote:cast', ({ target }) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.phase !== 'playing' || room.subPhase !== 'vote') return;
-    if (room.players[name]?.eliminated) return;
-
-    const rk = `round${room.round}`;
-    if (!room.votes[rk]) room.votes[rk] = {};
-    room.votes[rk][name] = target;
-    room.players[name].voted = true;
-    broadcastRoom(code);
-
-    // Trigger any bots that haven't voted yet (in case scheduleBotVotes missed them)
-    const aliveBots = getAlive(room).filter(n => room.players[n]?.isBot && !room.players[n]?.voted);
-    aliveBots.forEach((botName, i) => {
-      setTimeout(() => {
-        if (room.phase === 'playing' && room.subPhase === 'vote' && !room.players[botName]?.voted) {
-          botCastVote(room, code, botName);
-        }
-      }, 600 + i * 800);
-    });
-
-    // Check majority
-    const alive = getAlive(room);
-    const submitted = Object.keys(room.votes[rk] || {});
-    if (alive.every(n => submitted.includes(n))) {
-      clearTimer(code);
-      // Tally votes
-      const tally = {};
-      alive.forEach(n => { tally[n] = 0; });
-      Object.values(room.votes[rk]).forEach(t => { if (tally[t] !== undefined) tally[t]++; });
-      const maxVotes = Math.max(...Object.values(tally));
-      const tied = alive.filter(n => tally[n] === maxVotes);
-
-      if (tied.length === 1) {
-        eliminatePlayer(room, tied[0], code);
-      } else {
-        // Tie — broadcast and let host decide
-        io.to(code).emit('vote:tie', { tied, tally });
-        broadcastRoom(code);
-      }
-    }
-  });
-
-  // ── HOST OVERRIDE ELIMINATE ──
-  socket.on('vote:eliminate', ({ target }) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.host !== name) return;
-    if (!room.players[target] || room.players[target].eliminated) return;
-    clearTimer(code);
-    eliminatePlayer(room, target, code);
-  });
-
-  // ── HOST BREAKS TIE ──
-  socket.on('vote:tiebreak', ({ target }) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.host !== name) return;
-    eliminatePlayer(room, target, code);
-  });
-
-  // ── MR WHITE GUESS ──
-  socket.on('mrwhite:guess', ({ guess }) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || !room.mrWhiteGuessPhase) return;
-    room.mrWhiteGuessPhase = false;
-    const isCorrect = guess.toLowerCase().trim() === room.wordPair?.civilian?.toLowerCase().trim();
-    endGame(room, code, isCorrect ? 'mrwhite-wins' : 'civilians-win');
-  });
-
-  // ── RESET ──
-  socket.on('game:reset', () => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.host !== name) return;
-    clearTimer(code);
-    room.phase = 'lobby'; room.assignments = {}; room.wordPair = null;
-    room.words = {}; room.votes = {}; room.accusations = {}; room.round = 1;
-    room.mrWhiteGuessPhase = false; room.subPhase = 'words'; room.turnOrder = [];
-    room.timerEnd = null; room.timerPhase = null;
-    // Remove spectators from players, keep real players
-    Object.keys(room.players).forEach(p => {
-      if (room.players[p].isSpectator) { delete room.players[p]; }
-      else { room.players[p].ready = room.players[p].isBot || false; room.players[p].eliminated = false; room.players[p].voted = false; }
-    });
-    room.spectators = [];
-    broadcastRoom(code);
-  });
-
-  // ── UPDATE SETTINGS (host only) ──
-  socket.on('settings:update', (settings) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.host !== name) return;
-    room.settings = { ...room.settings, ...settings };
-    broadcastRoom(code);
-  });
-
-
-  // ── ADD BOT ──
-  socket.on('bot:add', () => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.host !== name || room.phase !== 'lobby') return;
-    if (Object.keys(room.players).length >= 10) return socket.emit('error', 'Salle pleine !');
-    const botName = pickBotName(room);
-    room.players[botName] = { socketId: null, connected: true, eliminated: false, ready: true, voted: false, isSpectator: false, isBot: true };
-    if (!room.scores[botName]) room.scores[botName] = { wins: 0 };
-    broadcastRoom(code);
-    io.to(code).emit('toast', `🤖 ${botName} a rejoint la salle !`);
-  });
-
-  // ── REMOVE BOT ──
-  socket.on('bot:remove', ({ botName }) => {
-    const { name, code } = socket.data || {};
-    const room = rooms[code];
-    if (!room || room.host !== name || room.phase !== 'lobby') return;
-    if (!room.players[botName]?.isBot) return;
-    delete room.players[botName];
-    broadcastRoom(code);
-    io.to(code).emit('toast', `🤖 ${botName} a quitté la salle`);
-  });
-
-  // ══════════════════════════════════════
-  //  WEBRTC SIGNALING (relay only)
-  // ══════════════════════════════════════
-
-  socket.on('rtc:offer', ({ to, offer }) => {
-    const { name, code } = socket.data || {};
-    const target = [...io.sockets.sockets.values()].find(s => s.data?.name === to && s.data?.code === code);
-    if (target) target.emit('rtc:offer', { from: name, offer });
-  });
-
-  socket.on('rtc:answer', ({ to, answer }) => {
-    const { name, code } = socket.data || {};
-    const target = [...io.sockets.sockets.values()].find(s => s.data?.name === to && s.data?.code === code);
-    if (target) target.emit('rtc:answer', { from: name, answer });
-  });
-
-  socket.on('rtc:ice', ({ to, candidate }) => {
-    const { name, code } = socket.data || {};
-    const target = [...io.sockets.sockets.values()].find(s => s.data?.name === to && s.data?.code === code);
-    if (target) target.emit('rtc:ice', { from: name, candidate });
-  });
-
-  socket.on('rtc:ready', () => {
-    const { name, code } = socket.data || {};
-    if (name && code) socket.to(code).emit('rtc:peer_joined', { name });
-  });
-
-  socket.on('rtc:leave', () => {
-    const { name, code } = socket.data || {};
-    if (name && code) socket.to(code).emit('rtc:peer_left', { name });
-  });
-
-});
-
-// ═══════════════════════════════
-//  GAME LOGIC
-// ═══════════════════════════════
-function eliminatePlayer(room, target, code) {
-  if (!room.players[target]) return;
-  room.players[target].eliminated = true;
-  const role = room.assignments[target]?.role;
-
-  // Emit elimination event WITH role (for animation) but only AFTER a short delay so it's dramatic
-  io.to(code).emit('player:eliminated', { name: target, role });
-
-  const alive = getAlive(room);
-  const aliveRoles = alive.map(n => room.assignments[n]?.role);
-  const undercoverCount = aliveRoles.filter(r => r === 'undercover').length;
-  const mrWhiteAlive = aliveRoles.includes('mr-white');
-  const civilianCount = aliveRoles.filter(r => r === 'civilian').length;
-
-  clearTimer(code);
-
-  if (role === 'undercover') {
-    if (undercoverCount > 0) {
-      // Still undercouvers alive
-      nextRound(room, code);
-    } else if (mrWhiteAlive) {
-      room.mrWhiteGuessPhase = true;
-      broadcastRoom(code);
-      const mrwName = Object.entries(room.assignments).find(([,a]) => a.role === 'mr-white')?.[0];
-      findSocket(mrwName, code)?.emit('mrwhite:your_turn');
-    } else {
-      endGame(room, code, 'civilians-win');
-    }
-  } else if (role === 'mr-white') {
-    if (undercoverCount > 0) { nextRound(room, code); }
-    else { endGame(room, code, 'civilians-win'); }
+  // Me row
+  const myMic = document.getElementById('vp-me-mic');
+  const myLbl = document.getElementById('vp-me-label');
+  if(Voice.active){
+    myMic.className = 'vp-me-mic ' + (Voice.muted ? 'muted' : 'on');
+    myMic.textContent = Voice.muted ? '🔇' : '🎙️';
+    myLbl.textContent = Voice.muted ? 'Micro coupé' : 'Micro actif';
   } else {
-    // Civilian eliminated
-    if (undercoverCount === 0 && !mrWhiteAlive) { endGame(room, code, 'civilians-win'); }
-    else if (civilianCount <= undercoverCount) {
-      endGame(room, code, undercoverCount > 0 ? 'undercover-wins' : 'mrwhite-wins');
-    } else {
-      nextRound(room, code);
-    }
-  }
-}
-
-function nextRound(room, code) {
-  room.round++;
-  room.subPhase = 'words';
-  room.currentTurnIndex = 0;
-  const rk = `round${room.round}`;
-  room.words[rk] = {};
-  room.votes[rk] = {};
-  Object.keys(room.players).forEach(p => { room.players[p].voted = false; });
-  broadcastRoom(code);
-  // Announce who goes first this round
-  const aliveTurnOrder = room.turnOrder.filter(n => !room.players[n]?.eliminated && room.players[n]?.connected);
-  const firstPlayer = aliveTurnOrder[0];
-  if (firstPlayer) io.to(code).emit('turn:next', { player: firstPlayer });
-  if (firstPlayer && room.players[firstPlayer]?.isBot) {
-    scheduleBotTurn(room, code, firstPlayer);
-  } else if (room.settings?.wordTimer) {
-    startTimer(code, WORD_TIMER_SECS, 'words');
-  }
-}
-
-function endGame(room, code, outcome) {
-  room.phase = 'result';
-  room.result = { outcome };
-
-  // Update scores
-  const asgn = room.assignments || {};
-  if (outcome === 'civilians-win') {
-    Object.entries(asgn).forEach(([n, a]) => {
-      if (a.role === 'civilian' && room.players[n] && !room.players[n].eliminated) {
-        if (!room.scores[n]) room.scores[n] = { wins: 0 };
-        room.scores[n].wins++;
-      }
-    });
-  } else if (outcome === 'undercover-wins') {
-    Object.entries(asgn).forEach(([n, a]) => {
-      if (a.role === 'undercover') {
-        if (!room.scores[n]) room.scores[n] = { wins: 0 };
-        room.scores[n].wins++;
-      }
-    });
-  } else if (outcome === 'mrwhite-wins') {
-    Object.entries(asgn).forEach(([n, a]) => {
-      if (a.role === 'mr-white') {
-        if (!room.scores[n]) room.scores[n] = { wins: 0 };
-        room.scores[n].wins++;
-      }
-    });
+    myMic.className = 'vp-me-mic off';
+    myMic.textContent = '🎙️';
+    myLbl.textContent = 'Micro désactivé';
   }
 
-  broadcastRoom(code);
+  // Join/leave button
+  const joinBtn = document.getElementById('vp-join-btn');
+  joinBtn.style.display = Voice.active ? 'none' : 'flex';
+
+  // Peers
+  const room = _lastRoom;
+  const players = room?.players || {};
+  const names = Object.keys(players).filter(n => !players[n].isSpectator && n !== S.name);
+  const EMOJIS_REF = ['🐉','⚔️','🌊','🔥','⚡','🌙','🎯','🗡️','🛡️','✨','👁️','🐺','🌸','💫','🦊','🗿','🌀','🦋','🔮','🎪'];
+  const allNames = Object.keys(players).filter(n => !players[n].isSpectator);
+
+  document.getElementById('vp-peers').innerHTML = names.map(n => {
+    const peer = Voice.peers[n];
+    const connected = !!peer?.gainNode;
+    const speaking = peer?.speaking || false;
+    const localMuted = Voice.remoteMuted[n] || false;
+    const vol = Voice.remoteVolume[n] ?? 1.0;
+    const idx = allNames.indexOf(n);
+    const emoji = EMOJIS_REF[idx % EMOJIS_REF.length];
+    return `<div class="vp-peer" data-peer="${n}">
+      <div class="vp-peer-em">${emoji}<div class="vp-speaking-ring ${speaking?'active':''}"></div></div>
+      <div class="vp-peer-info">
+        <div class="vp-peer-name">${n}</div>
+        <div class="vp-peer-status">${connected ? (speaking?'🔊 parle…':'connecté') : (Voice.active?'en attente…':'hors vocal')}</div>
+      </div>
+      <div class="vp-peer-vol">
+        <button class="vp-mute-btn ${localMuted?'muted':''}" onclick="voiceToggleRemoteMute('${n}')" title="${localMuted?'Réactiver':'Couper'}">${localMuted?'🔇':'🔊'}</button>
+        <input type="range" class="vp-vol-slider" min="0" max="200" value="${Math.round(vol*100)}" oninput="voiceSetRemoteVolume('${n}',this.value)" title="Volume ${n}" ${!connected?'disabled':''}>
+      </div>
+    </div>`;
+  }).join('') || `<div style="padding:14px 16px;font-family:var(--fm);font-size:11px;color:var(--muted)">Rejoins le vocal pour parler avec les autres.</div>`;
 }
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`✅ Undercover Anime backend on port ${PORT}`);
-  // Note: anti-sleep ping is handled client-side
+function voiceToggleRemoteMute(name){
+  Voice.remoteMuted[name] = !Voice.remoteMuted[name];
+  const peer = Voice.peers[name];
+  if(peer?.gainNode) peer.gainNode.gain.value = Voice.remoteMuted[name] ? 0 : (Voice.remoteVolume[name] ?? 1.0);
+  voiceRenderPanel();
+}
+
+function voiceSetRemoteVolume(name, val){
+  const v = parseInt(val) / 100;
+  Voice.remoteVolume[name] = v;
+  const peer = Voice.peers[name];
+  if(peer?.gainNode && !Voice.remoteMuted[name]) peer.gainNode.gain.value = v;
+}
+
+// ── Socket events (WebRTC signaling) ──────────────────
+
+function voiceBindSocket(){
+  // Someone else joined voice — they'll call us if we're already active
+  socket.on('rtc:peer_joined', async ({ name }) => {
+    if(!Voice.active) return;
+    // We call the new peer
+    await voiceCallPeer(name);
+    voiceRenderPanel();
+  });
+
+  socket.on('rtc:peer_left', ({ name }) => {
+    voiceClosePeer(name);
+    voiceRenderPanel();
+  });
+
+  socket.on('rtc:offer', async ({ from, offer }) => {
+    if(!Voice.active || !Voice.stream) return;
+    const peer = voiceGetOrCreatePeer(from);
+    try {
+      await peer.pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peer.pc.createAnswer();
+      await peer.pc.setLocalDescription(answer);
+      socket.emit('rtc:answer', { to: from, answer });
+    } catch(e){ console.warn('rtc:offer handler', e); }
+  });
+
+  socket.on('rtc:answer', async ({ from, answer }) => {
+    const peer = Voice.peers[from];
+    if(!peer) return;
+    try {
+      await peer.pc.setRemoteDescription(new RTCSessionDescription(answer));
+    } catch(e){ console.warn('rtc:answer handler', e); }
+  });
+
+  socket.on('rtc:ice', async ({ from, candidate }) => {
+    const peer = Voice.peers[from];
+    if(!peer || !candidate) return;
+    try {
+      await peer.pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch(e){ console.warn('rtc:ice', e); }
+  });
+}
+
+// ── Integration with game screens ─────────────────────
+
+// Show voice button when in game screens
+const _origShowScreen = showScreen;
+function showScreen(id){
+  _origShowScreen(id);
+  const gameScreens = ['s-lobby','s-reveal','s-waiting','s-playing','s-spectator','s-result'];
+  voiceShowBtn(gameScreens.includes(id));
+}
+
+// Leave voice on room leave / reset
+const _origLeaveRoom = leaveRoom;
+function leaveRoom(){
+  leaveVoice();
+  _origLeaveRoom();
+}
+
+
+// ── UTILS ──
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+function setLoading(on,text='CHARGEMENT'){document.getElementById('loading').classList.toggle('show',on);if(text)document.getElementById('l-text').textContent=text;}
+let _tt;
+function toast(msg,type=''){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(type?' '+type:'');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3200);}
+function resetState(){S={name:null,code:null,isHost:false,myAssignment:null,cardFlipped:false,genre:'shonen',subPhase:'words'};_lastRoom=null;_myVote=null;_currentTurnPlayer=null;}
+function showRules(){alert("📜 RÈGLES — UNDERCOVER ANIMÉ\n\n👥 RÔLES :\n• Civils → même perso, protégez-vous\n• Undercover → perso similaire, bluffez\n• Mr. White → ne sait rien, survivez\n\n⚠️ RÈGLE CLEF :\nDire le nom de ton perso = éliminé automatiquement !\n\n🎮 CHAQUE TOUR :\n1. Écris 1 mot (timer 45s)\n2. Pointe un suspect 👉\n3. Tout le monde vote\n4. Majorité → éliminé\n\n👁 Tu peux rejoindre en spectateur si la partie a déjà commencé\n\n🏆 Civils éliminent l'imposteur / Undercover survive / Mr. White devine le mot");}
+
+document.getElementById('chips').addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');S.genre=c.dataset.g;});
+
+window.addEventListener('load',()=>{
+  if(sessionStorage.getItem('uc'))initSocket();
+  const u=()=>{if(AC?.state==='suspended')AC.resume();};
+  document.addEventListener('touchstart',u,{once:true});
+  document.addEventListener('click',u,{once:true});
 });
+</script>
+</body>
+</html>

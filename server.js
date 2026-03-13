@@ -675,6 +675,27 @@ function fetchCharImage(charName) {
 app.get('/', (_, res) => res.send('Undercover Anime Backend OK ✅'));
 app.get('/ping', (_, res) => res.json({ ok: true, ts: Date.now() }));
 
+// Image proxy — serves MAL images without CORS issues
+app.get('/img', async (req, res) => {
+  const url = req.query.url;
+  if (!url || !url.startsWith('https://cdn.myanimelist.net/')) {
+    return res.status(400).send('Invalid URL');
+  }
+  try {
+    const r = await fetch(url, {
+      headers: { 'Referer': 'https://myanimelist.net/', 'User-Agent': 'Mozilla/5.0' }
+    });
+    if (!r.ok) return res.status(404).send('Not found');
+    const buf = await r.arrayBuffer();
+    res.set('Content-Type', r.headers.get('content-type') || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.set('Access-Control-Allow-Origin', '*');
+    res.send(Buffer.from(buf));
+  } catch (e) {
+    res.status(500).send('Error');
+  }
+});
+
 // ═══════════════════════════════
 //  SOCKET
 // ═══════════════════════════════

@@ -10,7 +10,7 @@ const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args
 
 const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
 const BOT_NAMES = ['Kaito','Yuki','Ryu','Hana','Sora','Nami','Ren','Aoi'];
-const BOT_THINK_DELAY = 2800; // ms before bot "responds" — feels human
+const BOT_THINK_DELAY = 1500; // ms before bot "responds" — keeps socket alive
 
 async function callClaude(systemPrompt, userPrompt) {
   try {
@@ -231,7 +231,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] } });
+const io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] }, pingInterval: 10000, pingTimeout: 30000, upgradeTimeout: 30000 });
 
 // ═══════════════════════════════
 //  PAIRS DATABASE
@@ -561,17 +561,25 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    const disconnectedSocketId = socket.id;
     const { name, code } = socket.data || {};
-    if (!name || !code || !rooms[code]) return;
-    const room = rooms[code];
-    if (room.players[name]) room.players[name].connected = false;
-    if (room.host === name && room.phase === 'lobby') {
-      const other = Object.entries(room.players).find(([n,p]) => n !== name && p.connected);
-      if (other) { room.host = other[0]; findSocket(other[0], code)?.emit('room:promoted', { isHost: true }); }
-      else { clearTimer(code); delete rooms[code]; return; }
-    }
-    broadcastRoom(code);
-    io.to(code).emit('toast', `${name} s'est déconnecté`);
+    if (!name || !code) return;
+    // Grace period: 4s before marking disconnected (handles brief reconnects during countdown)
+    setTimeout(() => {
+      const r = rooms[code];
+      if (!r || !r.players[name]) return;
+      // If player reconnected with a new socket already, skip
+      const current = findSocket(name, code);
+      if (current && current.id !== disconnectedSocketId) return;
+      r.players[name].connected = false;
+      if (r.host === name && r.phase === 'lobby') {
+        const other = Object.entries(r.players).find(([n,p]) => n !== name && p.connected && !p.isBot);
+        if (other) { r.host = other[0]; findSocket(other[0], code)?.emit('room:promoted', { isHost: true }); }
+        else { clearTimer(code); delete rooms[code]; return; }
+      }
+      broadcastRoom(code);
+      io.to(code).emit('toast', `${name} s'est déconnecté`);
+    }, 4000);
   });
 
   socket.on('room:reconnect', ({ name, code }) => {
@@ -1035,4 +1043,7 @@ function endGame(room, code, outcome) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`✅ Undercover Anime backend on port ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`✅ Undercover Anime backend on port ${PORT}`);
+  // Note: anti-sleep ping is handled client-side
+});

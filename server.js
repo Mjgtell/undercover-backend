@@ -800,7 +800,7 @@ app.get('/ping', (_, res) => res.json({ ok: true, ts: Date.now() }));
 // Image proxy — serves MAL images without CORS issues
 app.get('/img', async (req, res) => {
   const url = req.query.url;
-  if (!url || !url.startsWith('https://cdn.myanimelist.net/')) {
+  if (!url || (!url.startsWith('https://cdn.myanimelist.net/') && !url.startsWith('https://static.wikia.nocookie.net/'))) {
     return res.status(400).send('Invalid URL');
   }
   try {
@@ -814,6 +814,38 @@ app.get('/img', async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.send(Buffer.from(buf));
   } catch (e) {
+    res.status(500).send('Error');
+  }
+});
+
+// Audio proxy — streams AnimeThemes audio without CORS issues
+app.get('/audio', async (req, res) => {
+  const url = req.query.url;
+  if (!url || !url.includes('animethemes')) {
+    return res.status(400).send('Invalid URL');
+  }
+  try {
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://animethemes.moe/' }
+    });
+    if (!r.ok) return res.status(404).send('Not found');
+    const contentType = r.headers.get('content-type') || 'audio/ogg';
+    const contentLength = r.headers.get('content-length');
+    res.set('Content-Type', contentType);
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cache-Control', 'public, max-age=3600');
+    if (contentLength) res.set('Content-Length', contentLength);
+    // Stream the audio
+    const { Readable } = require('stream');
+    const readable = Readable.fromWeb ? Readable.fromWeb(r.body) : r.body;
+    if (readable && readable.pipe) {
+      readable.pipe(res);
+    } else {
+      const buf = await r.arrayBuffer();
+      res.send(Buffer.from(buf));
+    }
+  } catch(e) {
+    console.error('Audio proxy error:', e.message);
     res.status(500).send('Error');
   }
 });

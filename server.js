@@ -517,6 +517,16 @@ function genCode() {
 
 function sanitizeRoom(room) {
   const r = { ...room, players: {}, spectators: room.spectators || [], turnOrder: room.turnOrder || [], currentTurnIndex: room.currentTurnIndex ?? 0 };
+  // Include tierlist but hide other players' submissions during ranking phase
+  if (room.tierlist) {
+    r.tierlist = { ...room.tierlist };
+    if (room.tierlist.phase === 'ranking') {
+      // Only show count of who submitted, not the actual rankings
+      r.tierlist.submissions = Object.fromEntries(
+        Object.entries(room.tierlist.submissions || {}).map(([k]) => [k, true])
+      );
+    }
+  }
   for (const [n, p] of Object.entries(room.players)) {
     r.players[n] = { connected: p.connected, eliminated: p.eliminated, ready: p.ready, voted: p.voted, isSpectator: p.isSpectator || false, isBot: p.isBot || false };
   }
@@ -615,6 +625,114 @@ function clearTimer(code) {
 // ═══════════════════════════════
 function fetchCharImage(charName) {
   return CHARACTER_IMAGES[charName] || null;
+}
+
+
+// ═══════════════════════════════
+//  TIERLIST MODE
+// ═══════════════════════════════
+
+const TIERLIST_ANIMES = [
+  { title:'Naruto', malId:20 },
+  { title:'Naruto Shippuden', malId:1735 },
+  { title:'Dragon Ball Z', malId:813 },
+  { title:'One Piece', malId:21 },
+  { title:'Bleach', malId:269 },
+  { title:'Fairy Tail', malId:6702 },
+  { title:'Hunter x Hunter (2011)', malId:11061 },
+  { title:'Fullmetal Alchemist Brotherhood', malId:5114 },
+  { title:'Attack on Titan', malId:16498 },
+  { title:'My Hero Academia', malId:31964 },
+  { title:'Demon Slayer', malId:38000 },
+  { title:'Jujutsu Kaisen', malId:40748 },
+  { title:'Black Clover', malId:34235 },
+  { title:'Chainsaw Man', malId:44511 },
+  { title:'Blue Lock', malId:49596 },
+  { title:'Haikyuu!!', malId:20583 },
+  { title:'Kuroko no Basket', malId:11771 },
+  { title:'Slam Dunk', malId:1254 },
+  { title:'Hajime no Ippo', malId:263 },
+  { title:'Yu Yu Hakusho', malId:392 },
+  { title:'Inuyasha', malId:249 },
+  { title:'Dragon Ball', malId:223 },
+  { title:'One Punch Man', malId:30276 },
+  { title:'Mob Psycho 100', malId:32182 },
+  { title:'Tokyo Ghoul', malId:22319 },
+  { title:'Sword Art Online', malId:11757 },
+  { title:'Berserk', malId:33 },
+  { title:'Vinland Saga', malId:37521 },
+  { title:'Cowboy Bebop', malId:1 },
+  { title:'Death Note', malId:1535 },
+  { title:'Code Geass', malId:1575 },
+  { title:'Steins;Gate', malId:9253 },
+  { title:'Overlord', malId:29803 },
+  { title:'Re:Zero', malId:31240 },
+  { title:'No Game No Life', malId:19815 },
+  { title:'KonoSuba', malId:30831 },
+  { title:'Shield Hero', malId:35790 },
+  { title:'Mushoku Tensei', malId:39535 },
+  { title:'Tensura (Slime)', malId:37430 },
+  { title:'Ghost in the Shell', malId:43 },
+  { title:'Psycho-Pass', malId:13601 },
+  { title:'Black Lagoon', malId:707 },
+  { title:'Made in Abyss', malId:34599 },
+  { title:'Danganronpa', malId:19761 },
+  { title:'Toradora', malId:4224 },
+  { title:'Oregairu', malId:14813 },
+  { title:'Kaguya-sama', malId:37999 },
+  { title:'Horimiya', malId:42897 },
+  { title:'Clannad', malId:2167 },
+  { title:'AnoHana', malId:9989 },
+  { title:'Your Lie in April', malId:23273 },
+  { title:'Violet Evergarden', malId:33352 },
+  { title:'Fruits Basket', malId:356 },
+  { title:'Nana', malId:877 },
+  { title:'DanMachi', malId:28121 },
+  { title:'Spice and Wolf', malId:2966 },
+  { title:'Fate/Zero', malId:10087 },
+  { title:'Madoka Magica', malId:9756 },
+  { title:'Kill la Kill', malId:18679 },
+  { title:'Gurren Lagann', malId:2001 },
+  { title:'Neon Genesis Evangelion', malId:30 },
+  { title:'Sailor Moon', malId:530 },
+  { title:'Yuri on Ice', malId:32995 },
+  { title:'Ping Pong the Animation', malId:22135 },
+  { title:'JoJo Part 3 - Stardust Crusaders', malId:20899 },
+  { title:'JoJo Part 4 - Diamond is Unbreakable', malId:31933 },
+  { title:'Noragami', malId:20179 },
+  { title:'Fire Force', malId:38671 },
+  { title:'Dr. Stone', malId:38691 },
+  { title:'Classroom of the Elite', malId:35507 },
+  { title:'Seven Deadly Sins', malId:23755 },
+  { title:'Tokyo Revengers', malId:45576 },
+  { title:'Spy x Family', malId:50265 },
+  { title:'Bocchi the Rock', malId:47917 },
+  { title:'Oshi no Ko', malId:52034 },
+  { title:'Frieren', malId:52991 },
+  { title:'Dungeon Meshi', malId:52701 },
+];
+
+// Fetch 10 random characters from an anime via Jikan
+async function fetchAnimeCharacters(malId) {
+  try {
+    // Jikan returns top characters by popularity — take first 20 then randomize
+    const res = await fetch(`https://api.jikan.moe/v4/anime/${malId}/characters`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const chars = (data.data || [])
+      .filter(c => c.role === 'Main' || c.favorites > 100)
+      .slice(0, 30);
+    if (chars.length < 5) return null;
+    // Shuffle and pick 10
+    const shuffled = chars.sort(() => Math.random() - 0.5).slice(0, 10);
+    return shuffled.map(c => ({
+      name: c.character.name,
+      image: c.character.images?.jpg?.image_url || null,
+    }));
+  } catch(e) {
+    console.error('Jikan error:', e.message);
+    return null;
+  }
 }
 
 // ═══════════════════════════════
@@ -1034,6 +1152,156 @@ io.on('connection', (socket) => {
     delete room.players[botName];
     broadcastRoom(code);
     io.to(code).emit('toast', `🤖 ${botName} a quitté la salle`);
+  });
+
+
+  // ══════════════════════════════════════
+  //  TIERLIST MODE EVENTS
+  // ══════════════════════════════════════
+
+  // Host starts a tierlist round
+  socket.on('tierlist:start', async () => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name) return;
+    if (room.phase !== 'lobby') return;
+
+    room.phase = 'tierlist';
+    room.tierlist = {
+      anime: null,
+      characters: [],
+      submissions: {}, // name -> ordered array of char names
+      votes: {},       // name -> name of player they voted for
+      scores: room.tierlist?.scores || {},
+      round: (room.tierlist?.round || 0) + 1,
+      phase: 'loading', // loading -> ranking -> reveal -> vote -> result
+    };
+
+    // Init scores for all players
+    Object.keys(room.players).forEach(p => {
+      if (!room.tierlist.scores[p]) room.tierlist.scores[p] = 0;
+    });
+
+    io.to(code).emit('loading', true);
+    broadcastRoom(code);
+
+    // Pick random anime
+    const anime = TIERLIST_ANIMES[Math.floor(Math.random() * TIERLIST_ANIMES.length)];
+    room.tierlist.anime = anime;
+
+    // Fetch characters with retry
+    let chars = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      chars = await fetchAnimeCharacters(anime.malId);
+      if (chars) break;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    if (!chars) {
+      // Fallback: try another anime
+      const fallback = TIERLIST_ANIMES[Math.floor(Math.random() * TIERLIST_ANIMES.length)];
+      room.tierlist.anime = fallback;
+      chars = await fetchAnimeCharacters(fallback.malId);
+    }
+
+    if (!chars) {
+      io.to(code).emit('loading', false);
+      io.to(code).emit('toast', 'Erreur Jikan — réessaie', 'err');
+      room.phase = 'lobby';
+      broadcastRoom(code);
+      return;
+    }
+
+    room.tierlist.characters = chars;
+    room.tierlist.phase = 'ranking';
+    io.to(code).emit('loading', false);
+    broadcastRoom(code);
+  });
+
+  // Player submits their tierlist
+  socket.on('tierlist:submit', ({ ranking }) => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.phase !== 'tierlist' || room.tierlist.phase !== 'ranking') return;
+    if (!Array.isArray(ranking) || ranking.length !== 10) return;
+
+    room.tierlist.submissions[name] = ranking;
+    broadcastRoom(code);
+
+    // Check if everyone submitted
+    const alive = Object.keys(room.players).filter(p => room.players[p].connected && !room.players[p].isSpectator);
+    if (alive.every(p => room.tierlist.submissions[p])) {
+      room.tierlist.phase = 'reveal';
+      broadcastRoom(code);
+    }
+  });
+
+  // Player votes for best tierlist
+  socket.on('tierlist:vote', ({ target }) => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.phase !== 'tierlist' || room.tierlist.phase !== 'vote') return;
+    if (target === name) return; // can't vote for yourself
+    if (room.tierlist.votes[name]) return; // already voted
+
+    room.tierlist.votes[name] = target;
+    broadcastRoom(code);
+
+    // Check if everyone voted
+    const players = Object.keys(room.players).filter(p => room.players[p].connected && !room.players[p].isSpectator);
+    if (players.every(p => room.tierlist.votes[p])) {
+      // Tally
+      const tally = {};
+      players.forEach(p => { tally[p] = 0; });
+      Object.values(room.tierlist.votes).forEach(t => { if (tally[t] !== undefined) tally[t]++; });
+      const maxVotes = Math.max(...Object.values(tally));
+      const winners = players.filter(p => tally[p] === maxVotes);
+      // Award point (split on tie)
+      winners.forEach(w => { room.tierlist.scores[w] = (room.tierlist.scores[w] || 0) + 1; });
+      room.tierlist.winner = winners;
+      room.tierlist.tally = tally;
+      room.tierlist.phase = 'result';
+      broadcastRoom(code);
+    }
+  });
+
+  // Host opens vote phase (after everyone reviewed)
+  socket.on('tierlist:openVote', () => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name || room.tierlist?.phase !== 'reveal') return;
+    room.tierlist.phase = 'vote';
+    room.tierlist.votes = {};
+    broadcastRoom(code);
+  });
+
+  // Host starts next round or ends game
+  socket.on('tierlist:next', () => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name) return;
+    // Check if someone hit 10 points
+    const scores = room.tierlist.scores;
+    const champion = Object.entries(scores).find(([, s]) => s >= 10);
+    if (champion) {
+      room.tierlist.phase = 'champion';
+      broadcastRoom(code);
+    } else {
+      // Next round
+      room.phase = 'lobby';
+      room.tierlist.phase = 'idle';
+      broadcastRoom(code);
+    }
+  });
+
+  // Return to lobby from tierlist
+  socket.on('tierlist:reset', () => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name) return;
+    room.phase = 'lobby';
+    if (room.tierlist) room.tierlist.phase = 'idle';
+    broadcastRoom(code);
   });
 
   // ══════════════════════════════════════

@@ -516,7 +516,7 @@ function genCode() {
 }
 
 function sanitizeRoom(room) {
-  const r = { ...room, players: {}, spectators: room.spectators || [], turnOrder: room.turnOrder || [], currentTurnIndex: room.currentTurnIndex ?? 0 };
+  const r = { ...room, players: {}, spectators: room.spectators || [], turnOrder: room.turnOrder || [], currentTurnIndex: room.currentTurnIndex ?? 0, mode: room.mode || 'undercover' };
   // Include tierlist but hide other players' submissions during ranking phase
   if (room.tierlist) {
     r.tierlist = { ...room.tierlist };
@@ -767,11 +767,11 @@ app.get('/img', async (req, res) => {
 // ═══════════════════════════════
 io.on('connection', (socket) => {
 
-  socket.on('room:create', ({ name, genre, mrWhite, doubleUndercover, wordTimer }) => {
+  socket.on('room:create', ({ name, genre, mrWhite, doubleUndercover, wordTimer, settings, mode }) => {
     let code; do { code = genCode(); } while (rooms[code]);
     rooms[code] = {
       code, genre, host: name,
-      phase: 'lobby',
+      phase: 'lobby', mode: mode || 'undercover',
       settings: { mrWhite: !!mrWhite, doubleUndercover: !!doubleUndercover, wordTimer: wordTimer !== false },
       players: { [name]: { socketId: socket.id, connected: true, eliminated: false, ready: false, voted: false, isSpectator: false } },
       spectators: [],

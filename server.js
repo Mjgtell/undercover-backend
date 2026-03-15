@@ -735,6 +735,62 @@ async function fetchAnimeCharacters(malId) {
   }
 }
 
+
+// ═══════════════════════════════
+//  MUSIC RATING MODE
+// ═══════════════════════════════
+
+// Fetch themes from AnimeThemes API
+async function fetchAnimeThemes(type) {
+  // type: 'OP' | 'ED' | 'both'
+  try {
+    // Get a random page of anime themes
+    const page = Math.floor(Math.random() * 50) + 1;
+    const typeFilter = type === 'OP' ? '&filter[type]=OP' : type === 'ED' ? '&filter[type]=ED' : '';
+    const res = await fetch(
+      `https://api.animethemes.moe/animetheme?include=anime,song,animethemeentries.videos.audio&page[size]=20&page[number]=${page}${typeFilter}&sort=random`,
+      { headers: { 'User-Agent': 'UndercoverAnime/1.0' } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.animethemes || [];
+  } catch(e) {
+    console.error('AnimeThemes error:', e.message);
+    return null;
+  }
+}
+
+async function pickMusicTracks(count, type) {
+  // Fetch enough themes and pick random ones with valid audio
+  let all = [];
+  let attempts = 0;
+  while (all.length < count && attempts < 5) {
+    attempts++;
+    const themes = await fetchAnimeThemes(type);
+    if (!themes) break;
+    for (const t of themes) {
+      const entry = t.animethemeentries?.[0];
+      const video = entry?.videos?.[0];
+      const audioUrl = video?.audio?.link;
+      if (!audioUrl) continue;
+      const anime = t.anime;
+      const song = t.song;
+      all.push({
+        id: t.id,
+        title: song?.title || '???',
+        anime: anime?.name || '???',
+        type: t.type || 'OP',
+        sequence: t.sequence || 1,
+        audioUrl,
+      });
+      if (all.length >= count * 3) break;
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  // Shuffle and pick
+  return all.sort(() => Math.random() - 0.5).slice(0, count);
+}
+
 // ═══════════════════════════════
 //  HEALTH + PING (anti-sleep)
 // ═══════════════════════════════
@@ -1154,6 +1210,86 @@ io.on('connection', (socket) => {
     io.to(code).emit('toast', `🤖 ${botName} a quitté la salle`);
   });
 
+
+
+  // ══════════════════════════════════════
+  //  MUSIC RATING MODE EVENTS
+  // ══════════════════════════════════════
+
+  socket.on('music:start', async ({ type, count }) => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name || room.phase !== 'lobby') return;
+
+    const trackCount = Math.min(Math.max(parseInt(count) || 5, 1), 20);
+    const musicType = ['OP','ED','both'].includes(type) ? type : 'both';
+
+    room.phase = 'music';
+    room.music = {
+      tracks: [],
+      currentIndex: 0,
+      phase: 'loading', // loading -> playing -> rating -> reveal -> next -> done
+      ratings: {},      // trackIndex -> { playerName -> 0-10 }
+      type: musicType,
+      count: trackCount,
+    };
+
+    io.to(code).emit('loading', true);
+    broadcastRoom(code);
+
+    const tracks = await pickMusicTracks(trackCount, musicType);
+    if (!tracks || tracks.length === 0) {
+      io.to(code).emit('loading', false);
+      io.to(code).emit('toast', 'Erreur AnimeThemes — réessaie');
+      room.phase = 'lobby';
+      broadcastRoom(code);
+      return;
+    }
+
+    room.music.tracks = tracks;
+    room.music.phase = 'playing';
+    room.music.ratings = {};
+    tracks.forEach((_, i) => { room.music.ratings[i] = {}; });
+
+    io.to(code).emit('loading', false);
+    broadcastRoom(code);
+  });
+
+  // Player submits a rating for current track
+  socket.on('music:rate', ({ trackIndex, rating }) => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.phase !== 'music') return;
+    const r = parseFloat(rating);
+    if (isNaN(r) || r < 0 || r > 10) return;
+    if (!room.music.ratings[trackIndex]) room.music.ratings[trackIndex] = {};
+    room.music.ratings[trackIndex][name] = Math.round(r * 10) / 10;
+    broadcastRoom(code);
+  });
+
+  // Host moves to next track or ends session
+  socket.on('music:next', () => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name || room.phase !== 'music') return;
+    room.music.currentIndex++;
+    if (room.music.currentIndex >= room.music.tracks.length) {
+      room.music.phase = 'done';
+    } else {
+      room.music.phase = 'playing';
+    }
+    broadcastRoom(code);
+  });
+
+  // Return to lobby
+  socket.on('music:reset', () => {
+    const { name, code } = socket.data || {};
+    const room = rooms[code];
+    if (!room || room.host !== name) return;
+    room.phase = 'lobby';
+    room.music = null;
+    broadcastRoom(code);
+  });
 
   // ══════════════════════════════════════
   //  TIERLIST MODE EVENTS

@@ -976,64 +976,127 @@ const TOP_OST = [
 ];
 
 
-// Known popular anime slugs on AnimeThemes (verified format)
-const TOP_ANIME_SLUGS = {
+// Hardcoded popular tracks with verified AnimeThemes URL format
+const HARDCODED_TRACKS = {
   OP: [
-    'kimetsu-no-yaiba','fullmetal-alchemist-brotherhood','shingeki-no-kyojin',
-    'death-note','hunter-x-hunter-2011','one-punch-man','mob-psycho-100',
-    'jujutsu-kaisen','boku-no-hero-academia','chainsaw-man',
-    'code-geass-hangyaku-no-lelouch','naruto-shippuuden','naruto',
-    'cowboy-bebop','sword-art-online','tokyo-ghoul','erased',
-    'angel-beats','guilty-crown','vinland-saga','blue-lock',
-    'spy-x-family','mashle-magic-and-muscles','dan-da-dan',
-    'frieren-beyond-journeys-end','oshi-no-ko',
+    { title:'Gurenge', anime:'Demon Slayer', audioUrl:'https://v.animethemes.moe/KimetsunoYaiba-OP1.ogg' },
+    { title:'Guren no Yumiya', anime:'Attack on Titan', audioUrl:'https://v.animethemes.moe/ShingekinoKyojin-OP1.ogg' },
+    { title:'Again', anime:'FMA Brotherhood', audioUrl:'https://v.animethemes.moe/FullmetalAlchemistBrotherhood-OP1.ogg' },
+    { title:'The World', anime:'Death Note', audioUrl:'https://v.animethemes.moe/DeathNote-OP1.ogg' },
+    { title:'Unravel', anime:'Tokyo Ghoul', audioUrl:'https://v.animethemes.moe/TokyoGhoul-OP1.ogg' },
+    { title:'Tank!', anime:'Cowboy Bebop', audioUrl:'https://v.animethemes.moe/CowboyBebop-OP1.ogg' },
+    { title:'Colors', anime:'Code Geass', audioUrl:'https://v.animethemes.moe/CodeGeassHangyakunoLelouch-OP1.ogg' },
+    { title:'Departure', anime:'Hunter x Hunter', audioUrl:'https://v.animethemes.moe/HunterxHunter2011-OP1.ogg' },
+    { title:'The Hero', anime:'One Punch Man', audioUrl:'https://v.animethemes.moe/OnePunchMan-OP1.ogg' },
+    { title:'99', anime:'Mob Psycho 100', audioUrl:'https://v.animethemes.moe/MobPsycho100-OP1.ogg' },
+    { title:'Re:Re:', anime:'Erased', audioUrl:'https://v.animethemes.moe/BokuDakegaInaiMachi-OP1.ogg' },
+    { title:'Kaikai Kitan', anime:'Jujutsu Kaisen', audioUrl:'https://v.animethemes.moe/JujutsuKaisen-OP1.ogg' },
+    { title:'Odd Future', anime:'My Hero Academia S4', audioUrl:'https://v.animethemes.moe/BokunoHeroAcademia4thSeason-OP1.ogg' },
+    { title:'Peace Sign', anime:'My Hero Academia S2', audioUrl:'https://v.animethemes.moe/BokunoHeroAcademia2ndSeason-OP1.ogg' },
+    { title:'My Soul Your Beats', anime:'Angel Beats', audioUrl:'https://v.animethemes.moe/AngelBeats-OP1.ogg' },
+    { title:'Crossing Field', anime:'Sword Art Online', audioUrl:'https://v.animethemes.moe/SwordArtOnline-OP1.ogg' },
+    { title:'Blue Bird', anime:'Naruto Shippuden', audioUrl:'https://v.animethemes.moe/NarutoShippuuden-OP3.ogg' },
+    { title:'Sign', anime:'Naruto Shippuden', audioUrl:'https://v.animethemes.moe/NarutoShippuuden-OP6.ogg' },
+    { title:'GO!!!', anime:'Naruto', audioUrl:'https://v.animethemes.moe/Naruto-OP4.ogg' },
+    { title:'Silhouette', anime:'Naruto Shippuden', audioUrl:'https://v.animethemes.moe/NarutoShippuuden-OP16.ogg' },
+    { title:'Sono Chi no Sadame', anime:'JoJo Part 1', audioUrl:'https://v.animethemes.moe/JoJonoKimyounaNaBoukenhazimarinoSekaihen-OP1.ogg' },
+    { title:'Bloody Stream', anime:'JoJo Part 2', audioUrl:'https://v.animethemes.moe/JoJonoKimyounaNaBoukenhazimarinoSekaihen-OP2.ogg' },
+    { title:'Great Days', anime:'JoJo Part 4', audioUrl:'https://v.animethemes.moe/JoJonoKimyounaNaBoukenDiamondwaKudakenai-OP3.ogg' },
+    { title:'Renai Circulation', anime:'Bakemonogatari', audioUrl:'https://v.animethemes.moe/Bakemonogatari-OP4.ogg' },
+    { title:'Catch You Catch Me', anime:'Cardcaptor Sakura', audioUrl:'https://v.animethemes.moe/CardcaptorSakura-OP1.ogg' },
+    { title:'Cruel Angel Thesis', anime:'Neon Genesis Evangelion', audioUrl:'https://v.animethemes.moe/ShinseikiEvangelion-OP1.ogg' },
+    { title:'Connect', anime:'Madoka Magica', audioUrl:'https://v.animethemes.moe/MahouShoujoMadokaMagica-OP1.ogg' },
+    { title:'Sirius', anime:'Kill la Kill', audioUrl:'https://v.animethemes.moe/KilllaKill-OP1.ogg' },
+    { title:'Happily Ever After', anime:'Fairy Tail', audioUrl:'https://v.animethemes.moe/FairyTail-OP1.ogg' },
+    { title:'We Are!', anime:'One Piece', audioUrl:'https://v.animethemes.moe/OnePiece-OP1.ogg' },
+    { title:'Cha-La Head-Cha-La', anime:'Dragon Ball Z', audioUrl:'https://v.animethemes.moe/DragonBallZ-OP1.ogg' },
+    { title:'Driver's High', anime:'GTO', audioUrl:'https://v.animethemes.moe/GTO-OP1.ogg' },
+    { title:'Haruka Kanata', anime:'Naruto', audioUrl:'https://v.animethemes.moe/Naruto-OP2.ogg' },
+    { title:'Days', anime:'Eureka Seven', audioUrl:'https://v.animethemes.moe/EurekaSevenKokyounoPoetry-OP1.ogg' },
+    { title:'Bling-Bang-Bang-Born', anime:'Mashle S2', audioUrl:'https://v.animethemes.moe/MashleMagicandMuscles2ndSeason-OP1.ogg' },
+    { title:'Cry Baby', anime:'Tokyo Revengers', audioUrl:'https://v.animethemes.moe/TokyoRevengers-OP1.ogg' },
+    { title:'Mixed Nuts', anime:'Spy x Family', audioUrl:'https://v.animethemes.moe/SpyxFamily-OP1.ogg' },
+    { title:'Otonoke', anime:'Dandadan', audioUrl:'https://v.animethemes.moe/DanDaDan-OP1.ogg' },
+    { title:'KICK BACK', anime:'Chainsaw Man', audioUrl:'https://v.animethemes.moe/ChainsawMan-OP1.ogg' },
+    { title:'Specialz', anime:'Jujutsu Kaisen S2', audioUrl:'https://v.animethemes.moe/JujutsuKaisen2ndSeason-OP1.ogg' },
+    { title:'W.M.B', anime:'Blue Lock', audioUrl:'https://v.animethemes.moe/BlueLock-OP1.ogg' },
+    { title:'Freesia', anime:'Vinland Saga', audioUrl:'https://v.animethemes.moe/VinlandSaga-OP1.ogg' },
+    { title:'Shikigami', anime:'Frieren', audioUrl:'https://v.animethemes.moe/SousounoFrieren-OP1.ogg' },
+    { title:'Inner Universe', anime:'Ghost in the Shell SAC', audioUrl:'https://v.animethemes.moe/KoukakuKidoutaiStandAloneComplex-OP1.ogg' },
+    { title:'Tabi no途中', anime:'Spice and Wolf', audioUrl:'https://v.animethemes.moe/OokamitoKoushinryou-OP1.ogg' },
+    { title:'Bless Your Breath', anime:'Overlord', audioUrl:'https://v.animethemes.moe/Overlord-OP1.ogg' },
+    { title:'This Game', anime:'No Game No Life', audioUrl:'https://v.animethemes.moe/NoGameNoLife-OP1.ogg' },
+    { title:'Liar Mask', anime:'Akame ga Kill', audioUrl:'https://v.animethemes.moe/AkamegaKill-OP1.ogg' },
+    { title:'Uso', anime:'FMA Brotherhood', audioUrl:'https://v.animethemes.moe/FullmetalAlchemistBrotherhood-OP2.ogg' },
+    { title:'Period', anime:'FMA Brotherhood', audioUrl:'https://v.animethemes.moe/FullmetalAlchemistBrotherhood-OP4.ogg' },
+    { title:'Boku no Sensou', anime:'Attack on Titan S4', audioUrl:'https://v.animethemes.moe/ShingekinoKyojinTheFinalSeason-OP1.ogg' },
   ],
   ED: [
-    'fullmetal-alchemist-brotherhood','clannad-after-story','toradora',
-    'anohana','your-lie-in-april','violet-evergarden','re-zero-kara-hajimeru-isekai-seikatsu',
-    'kimetsu-no-yaiba','jujutsu-kaisen','chainsaw-man','steins-gate',
-    'one-punch-man','angel-beats','haikyuu','attack-on-titan',
-    'naruto-shippuuden','guilty-crown','made-in-abyss','vinland-saga',
+    { title:'Dango Daikazoku', anime:'Clannad', audioUrl:'https://v.animethemes.moe/Clannad-ED1.ogg' },
+    { title:'Uso', anime:'FMA Brotherhood', audioUrl:'https://v.animethemes.moe/FullmetalAlchemistBrotherhood-ED1.ogg' },
+    { title:'Fukai Mori', anime:'Inuyasha', audioUrl:'https://v.animethemes.moe/InuYasha-ED2.ogg' },
+    { title:'Wind', anime:'Naruto', audioUrl:'https://v.animethemes.moe/Naruto-ED1.ogg' },
+    { title:'Vanilla Salt', anime:'Toradora', audioUrl:'https://v.animethemes.moe/Toradora-ED1.ogg' },
+    { title:'Kokuhaku', anime:'Toradora', audioUrl:'https://v.animethemes.moe/Toradora-ED2.ogg' },
+    { title:'Yumesekai', anime:'Madoka Magica', audioUrl:'https://v.animethemes.moe/MahouShoujoMadokaMagica-ED1.ogg' },
+    { title:'Last Dance', anime:'Re:Zero', audioUrl:'https://v.animethemes.moe/ReZero-ED1.ogg' },
+    { title:'Styx Helix', anime:'Re:Zero', audioUrl:'https://v.animethemes.moe/ReZero-ED2.ogg' },
+    { title:'Ichiban no Takaramono', anime:'Angel Beats', audioUrl:'https://v.animethemes.moe/AngelBeats-ED1.ogg' },
+    { title:'Tabidachi no Hi ni', anime:'Violet Evergarden', audioUrl:'https://v.animethemes.moe/VioletEvergarden-ED1.ogg' },
+    { title:'Kaze no Uta', anime:'Steins;Gate', audioUrl:'https://v.animethemes.moe/SteinsGate-ED1.ogg' },
+    { title:'Fly Me to the Moon', anime:'Evangelion', audioUrl:'https://v.animethemes.moe/ShinseikiEvangelion-ED1.ogg' },
+    { title:'Departures', anime:'Guilty Crown', audioUrl:'https://v.animethemes.moe/GuiltyyCrown-ED1.ogg' },
+    { title:'Zankyou Chord', anime:'Your Lie in April', audioUrl:'https://v.animethemes.moe/ShigatsuwaKiminoUso-ED1.ogg' },
+    { title:'Satoru', anime:'Erased', audioUrl:'https://v.animethemes.moe/BokuDakegaInaiMachi-ED1.ogg' },
+    { title:'Torches', anime:'Vinland Saga', audioUrl:'https://v.animethemes.moe/VinlandSaga-ED1.ogg' },
+    { title:'Deep in Abyss', anime:'Made in Abyss', audioUrl:'https://v.animethemes.moe/MadeinAbyss-ED1.ogg' },
+    { title:'Waltz', anime:'Fruits Basket 2019', audioUrl:'https://v.animethemes.moe/FruitsBasket2019-ED1.ogg' },
+    { title:'Don't say lazy', anime:'K-On!', audioUrl:'https://v.animethemes.moe/KOn-ED1.ogg' },
+    { title:'Hare Hare Yukai', anime:'Haruhi Suzumiya', audioUrl:'https://v.animethemes.moe/SuzumiyaHaruhinoYuuutsu-ED1.ogg' },
+    { title:'Chiisana Tenohira', anime:'Clannad After Story', audioUrl:'https://v.animethemes.moe/ClannadAfterStory-ED1.ogg' },
+    { title:'Yoru ni Kakeru', anime:'Given', audioUrl:'https://v.animethemes.moe/Given-ED1.ogg' },
+    { title:'Chainsaw Blood', anime:'Chainsaw Man', audioUrl:'https://v.animethemes.moe/ChainsawMan-ED1.ogg' },
+    { title:'Akeboshi', anime:'Naruto', audioUrl:'https://v.animethemes.moe/Naruto-ED2.ogg' },
+    { title:'Blue Bird (ED)', anime:'Naruto Shippuden', audioUrl:'https://v.animethemes.moe/NarutoShippuuden-ED12.ogg' },
+    { title:'Gravity', anime:"Wolf's Rain", audioUrl:'https://v.animethemes.moe/WolfsRain-ED1.ogg' },
+    { title:'Haikyuu ED', anime:'Haikyuu', audioUrl:'https://v.animethemes.moe/Haikyuu-ED1.ogg' },
+    { title:'Ref:rain', anime:'Iroduku', audioUrl:'https://v.animethemes.moe/IrodukuSekainiKimitoWa-ED1.ogg' },
+    { title:'Uraomote Lovers', anime:'Oreimo', audioUrl:'https://v.animethemes.moe/OrenoImoutogaKonnaniKawaiiWakeganai-ED1.ogg' },
+    { title:'Nobody', anime:'Kaiju No.8', audioUrl:'https://v.animethemes.moe/KaijuNo8-ED1.ogg' },
+    { title:'Burning', anime:'Oshi no Ko S2', audioUrl:'https://v.animethemes.moe/OshinoKo2ndSeason-ED1.ogg' },
   ],
   OS: [
-    'shingeki-no-kyojin','fullmetal-alchemist-brotherhood','death-note',
-    'steins-gate','your-lie-in-april','violet-evergarden','clannad-after-story',
-    'neon-genesis-evangelion','code-geass-hangyaku-no-lelouch','made-in-abyss',
+    { title:'Nandemonaiya', anime:'Your Name', audioUrl:'https://v.animethemes.moe/KiminoNaWa-ED2.ogg' },
+    { title:'Sparkle', anime:'Your Name', audioUrl:'https://v.animethemes.moe/KiminoNaWa-ED1.ogg' },
+    { title:'Call of Silence', anime:'Attack on Titan S3', audioUrl:'https://v.animethemes.moe/ShingekinoKyojin3rdSeason-ED1.ogg' },
+    { title:'Lullaby of Birdheads', anime:'Made in Abyss', audioUrl:'https://v.animethemes.moe/MadeinAbyss-OP1.ogg' },
+    { title:'Gate of Steiner', anime:'Steins;Gate', audioUrl:'https://v.animethemes.moe/SteinsGate-OP1.ogg' },
+    { title:'God Knows', anime:'Haruhi Suzumiya', audioUrl:'https://v.animethemes.moe/SuzumiyaHaruhinoYuuutsu-OP1.ogg' },
+    { title:'Cagayake Girls', anime:'K-On!', audioUrl:'https://v.animethemes.moe/KOn-OP1.ogg' },
+    { title:'Euterpe', anime:'Guilty Crown', audioUrl:'https://v.animethemes.moe/GuiltyyCrown-ED2.ogg' },
+    { title:'Brave Heart', anime:'Digimon', audioUrl:'https://v.animethemes.moe/DigimonAdventure-OP1.ogg' },
+    { title:'Oath Sign', anime:'Fate/Zero', audioUrl:'https://v.animethemes.moe/FateZero-OP1.ogg' },
+    { title:'Crossing', anime:'Fate/Zero S2', audioUrl:'https://v.animethemes.moe/FateZero2ndSeason-OP1.ogg' },
+    { title:'Brave Shine', anime:'Fate/Stay Night UBW S2', audioUrl:'https://v.animethemes.moe/FateStayNightUnlimitedBladeWorks2ndSeason-OP1.ogg' },
+    { title:'Tori no Uta', anime:'Air', audioUrl:'https://v.animethemes.moe/Air-OP1.ogg' },
+    { title:'Inner Universe', anime:'Ghost in the Shell SAC', audioUrl:'https://v.animethemes.moe/KoukakuKidoutaiStandAloneComplex-OP1.ogg' },
+    { title:'My Dearest', anime:'Guilty Crown', audioUrl:'https://v.animethemes.moe/GuiltyyCrown-OP1.ogg' },
+    { title:'Philosophia', anime:'Spice and Wolf II', audioUrl:'https://v.animethemes.moe/OokamitoKoushinryouII-OP1.ogg' },
+    { title:'Bloody Stream', anime:'JoJo Part 2', audioUrl:'https://v.animethemes.moe/JoJonoKimyounaNaBoukenhazimarinoSekaihen-OP2.ogg' },
+    { title:'Koi wa Chaos no Shimobe', anime:'Domestic na Kanojo', audioUrl:'https://v.animethemes.moe/DomesticnaKanojo-OP1.ogg' },
+    { title:'Period', anime:'FMA Brotherhood', audioUrl:'https://v.animethemes.moe/FullmetalAlchemistBrotherhood-OP4.ogg' },
+    { title:'Shunkan Sentimental', anime:'FMA Brotherhood', audioUrl:'https://v.animethemes.moe/FullmetalAlchemistBrotherhood-ED4.ogg' },
   ],
 };
 
 async function fetchTopAnimeThemes(type) {
-  const slugList = type === 'OP' ? TOP_ANIME_SLUGS.OP
-    : type === 'ED' ? TOP_ANIME_SLUGS.ED
-    : type === 'OS' ? TOP_ANIME_SLUGS.OS
-    : [...TOP_ANIME_SLUGS.OP, ...TOP_ANIME_SLUGS.ED];
-
-  const shuffled = [...new Set(slugList)].sort(() => Math.random() - 0.5).slice(0, 8);
-  const results = [];
-
-  for (const slug of shuffled) {
-    try {
-      const url = `https://api.animethemes.moe/anime/${slug}?include=animethemes.animethemeentries.videos.audio,animethemes.song`;
-      const res = await fetch(url, { headers: { 'User-Agent': 'UndercoverAnime/1.0' } });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const anime = data.anime;
-      if (!anime) continue;
-      for (const t of (anime.animethemes || [])) {
-        if (type === 'OP' && t.type !== 'OP') continue;
-        if (type === 'ED' && t.type !== 'ED') continue;
-        if (type === 'OS' && t.type !== 'OS') continue;
-        const entry = t.animethemeentries?.[0];
-        const video = entry?.videos?.[0];
-        const audioUrl = video?.audio?.link;
-        if (!audioUrl) continue;
-        results.push({ id: `${slug}-${t.id}`, title: t.song?.title || '???', anime: anime.name || '???', type: t.type, audioUrl });
-      }
-      await new Promise(r => setTimeout(r, 150));
-    } catch(e) { console.error('AnimeThemes slug error:', e.message); }
-  }
-  return results;
+  const list = type === 'OP' ? HARDCODED_TRACKS.OP
+    : type === 'ED' ? HARDCODED_TRACKS.ED
+    : type === 'OS' ? HARDCODED_TRACKS.OS
+    : [...HARDCODED_TRACKS.OP, ...HARDCODED_TRACKS.ED];
+  return list.map((t, i) => ({ ...t, id: i, type: type === 'both' ? (i < HARDCODED_TRACKS.OP.length ? 'OP' : 'ED') : type }));
 }
+
 
 async function pickMusicTracks(count, type, pool) {
   let all = [];

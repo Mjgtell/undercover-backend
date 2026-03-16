@@ -1325,9 +1325,16 @@ app.get('/audio', async (req, res) => {
   }
   try {
     const r = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://animethemes.moe/' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://animethemes.moe/',
+        'Origin': 'https://animethemes.moe',
+        'Accept': 'audio/webm,audio/ogg,audio/*;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+      },
       redirect: 'follow',
     });
+    console.log('Audio proxy status:', r.status, 'for', url.substring(0, 60));
     if (!r.ok) return res.status(r.status).send('Not found');
     const contentType = r.headers.get('content-type') || 'audio/ogg';
     const contentLength = r.headers.get('content-length');

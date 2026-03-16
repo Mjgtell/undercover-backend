@@ -771,7 +771,7 @@ async function pickMusicTracks(count, type) {
     for (const t of themes) {
       const entry = t.animethemeentries?.[0];
       const video = entry?.videos?.[0];
-      const audioUrl = video?.audio?.link;
+      const audioUrl = video?.audio?.link || video?.link?.replace('.webm','.ogg').replace('animethemes.moe/video','v.animethemes.moe');
       if (!audioUrl) continue;
       const anime = t.anime;
       const song = t.song;
@@ -825,25 +825,18 @@ app.get('/audio', async (req, res) => {
     return res.status(400).send('Invalid URL');
   }
   try {
+    console.log('Audio proxy fetching:', url);
     const r = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://animethemes.moe/' }
     });
-    if (!r.ok) return res.status(404).send('Not found');
+    console.log('Audio proxy response:', r.status, r.headers.get('content-type'));
+    if (!r.ok) return res.status(r.status).send('Not found');
     const contentType = r.headers.get('content-type') || 'audio/ogg';
-    const contentLength = r.headers.get('content-length');
     res.set('Content-Type', contentType);
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Cache-Control', 'public, max-age=3600');
-    if (contentLength) res.set('Content-Length', contentLength);
-    // Stream the audio
-    const { Readable } = require('stream');
-    const readable = Readable.fromWeb ? Readable.fromWeb(r.body) : r.body;
-    if (readable && readable.pipe) {
-      readable.pipe(res);
-    } else {
-      const buf = await r.arrayBuffer();
-      res.send(Buffer.from(buf));
-    }
+    const buf = await r.arrayBuffer();
+    res.send(Buffer.from(buf));
   } catch(e) {
     console.error('Audio proxy error:', e.message);
     res.status(500).send('Error');

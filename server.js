@@ -1152,18 +1152,27 @@ app.get('/audio', async (req, res) => {
     return res.status(400).send('Invalid URL');
   }
   try {
-    console.log('Audio proxy fetching:', url);
     const r = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://animethemes.moe/' }
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://animethemes.moe/' },
+      redirect: 'follow',
     });
-    console.log('Audio proxy response:', r.status, r.headers.get('content-type'));
     if (!r.ok) return res.status(r.status).send('Not found');
     const contentType = r.headers.get('content-type') || 'audio/ogg';
+    const contentLength = r.headers.get('content-length');
     res.set('Content-Type', contentType);
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Cache-Control', 'public, max-age=3600');
-    const buf = await r.arrayBuffer();
-    res.send(Buffer.from(buf));
+    res.set('Accept-Ranges', 'bytes');
+    if (contentLength) res.set('Content-Length', contentLength);
+    // Stream response body directly to client
+    const { Readable } = require('stream');
+    if (r.body && r.body.pipeTo) {
+      // Web Streams API (Node 18+)
+      Readable.fromWeb(r.body).pipe(res);
+    } else {
+      const buf = await r.arrayBuffer();
+      res.send(Buffer.from(buf));
+    }
   } catch(e) {
     console.error('Audio proxy error:', e.message);
     res.status(500).send('Error');

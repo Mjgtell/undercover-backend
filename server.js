@@ -740,20 +740,25 @@ async function fetchAnimeCharacters(malId) {
 //  MUSIC RATING MODE
 // ═══════════════════════════════
 
-// Fetch themes from AnimeThemes API
+// Fetch top anime themes by popularity from AnimeThemes API
 async function fetchAnimeThemes(type) {
-  // type: 'OP' | 'ED' | 'both'
   try {
-    // Get a random page of anime themes
-    const page = Math.floor(Math.random() * 50) + 1;
-    const typeFilter = type === 'OP' ? '&filter[type]=OP' : type === 'ED' ? '&filter[type]=ED' : '';
+    // Use anime sorted by MAL score/popularity — fetch top anime then get their themes
+    // type: 'OP' | 'ED' | 'OS' | 'both'
+    const typeFilter = type === 'OP' ? '&filter[animetheme][type]=OP'
+      : type === 'ED' ? '&filter[animetheme][type]=ED'
+      : type === 'OS' ? '&filter[animetheme][type]=OS'
+      : '';
+
+    // Fetch top ~200 anime by score, get their themes
+    const page = Math.floor(Math.random() * 5) + 1; // pages 1-5 of top anime
     const res = await fetch(
-      `https://api.animethemes.moe/animetheme?include=anime,song,animethemeentries.videos.audio&page[size]=20&page[number]=${page}${typeFilter}&sort=random`,
+      `https://api.animethemes.moe/anime?include=animethemes.animethemeentries.videos.audio,animethemes.song&page[size]=40&page[number]=${page}&sort=-year&filter[has]=animethemes${typeFilter}`,
       { headers: { 'User-Agent': 'UndercoverAnime/1.0' } }
     );
     if (!res.ok) return null;
     const data = await res.json();
-    return data.animethemes || [];
+    return data.anime || [];
   } catch(e) {
     console.error('AnimeThemes error:', e.message);
     return null;
@@ -761,34 +766,48 @@ async function fetchAnimeThemes(type) {
 }
 
 async function pickMusicTracks(count, type) {
-  // Fetch enough themes and pick random ones with valid audio
   let all = [];
   let attempts = 0;
-  while (all.length < count && attempts < 5) {
+
+  while (all.length < count * 2 && attempts < 6) {
     attempts++;
-    const themes = await fetchAnimeThemes(type);
-    if (!themes) break;
-    for (const t of themes) {
-      const entry = t.animethemeentries?.[0];
-      const video = entry?.videos?.[0];
-      const audioUrl = video?.audio?.link || video?.link?.replace('.webm','.ogg').replace('animethemes.moe/video','v.animethemes.moe');
-      if (!audioUrl) continue;
-      const anime = t.anime;
-      const song = t.song;
-      all.push({
-        id: t.id,
-        title: song?.title || '???',
-        anime: anime?.name || '???',
-        type: t.type || 'OP',
-        sequence: t.sequence || 1,
-        audioUrl,
-      });
-      if (all.length >= count * 3) break;
+    const animes = await fetchAnimeThemes(type);
+    if (!animes || !animes.length) { await new Promise(r => setTimeout(r, 500)); continue; }
+
+    for (const anime of animes) {
+      const themes = anime.animethemes || [];
+      for (const t of themes) {
+        // Filter by type if needed
+        if (type === 'OP' && t.type !== 'OP') continue;
+        if (type === 'ED' && t.type !== 'ED') continue;
+        if (type === 'OS' && t.type !== 'OS') continue;
+
+        const entry = t.animethemeentries?.[0];
+        const video = entry?.videos?.[0];
+        const audioUrl = video?.audio?.link;
+        if (!audioUrl) continue;
+
+        all.push({
+          id: t.id,
+          title: t.song?.title || '???',
+          anime: anime.name || '???',
+          type: t.type || 'OP',
+          sequence: t.sequence || 1,
+          audioUrl,
+        });
+      }
     }
     await new Promise(r => setTimeout(r, 300));
   }
-  // Shuffle and pick
-  return all.sort(() => Math.random() - 0.5).slice(0, count);
+
+  // Remove duplicates and shuffle
+  const seen = new Set();
+  const unique = all.filter(t => {
+    if (seen.has(t.id)) return false;
+    seen.add(t.id); return true;
+  });
+
+  return unique.sort(() => Math.random() - 0.5).slice(0, count);
 }
 
 

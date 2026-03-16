@@ -1041,7 +1041,10 @@ const FREE_TIERLIST_POOL = [
 ];
 
 function pickFreeTierlistChars(count) {
-  return [...FREE_TIERLIST_POOL].sort(() => Math.random() - 0.5).slice(0, count);
+  return [...FREE_TIERLIST_POOL]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, count)
+    .map(c => ({ ...c, image: CHARACTER_IMAGES[c.name] || null }));
 }
 
 // ═══════════════════════════════

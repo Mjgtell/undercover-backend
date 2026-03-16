@@ -741,21 +741,24 @@ async function fetchAnimeCharacters(malId) {
 // ═══════════════════════════════
 
 // Fetch top anime themes by popularity from AnimeThemes API
-async function fetchAnimeThemes(type) {
+async function fetchAnimeThemes(type, pool) {
   try {
-    // Use anime sorted by MAL score/popularity — fetch top anime then get their themes
-    // type: 'OP' | 'ED' | 'OS' | 'both'
     const typeFilter = type === 'OP' ? '&filter[animetheme][type]=OP'
       : type === 'ED' ? '&filter[animetheme][type]=ED'
       : type === 'OS' ? '&filter[animetheme][type]=OS'
       : '';
 
-    // Fetch top ~200 anime by score, get their themes
-    const page = Math.floor(Math.random() * 5) + 1; // pages 1-5 of top anime
-    const res = await fetch(
-      `https://api.animethemes.moe/anime?include=animethemes.animethemeentries.videos.audio,animethemes.song&page[size]=40&page[number]=${page}&sort=-year&filter[has]=animethemes${typeFilter}`,
-      { headers: { 'User-Agent': 'UndercoverAnime/1.0' } }
-    );
+    let url;
+    if (pool === 'random') {
+      // Full random — any page from 1 to 200
+      const page = Math.floor(Math.random() * 200) + 1;
+      url = `https://api.animethemes.moe/anime?include=animethemes.animethemeentries.videos.audio,animethemes.song&page[size]=20&page[number]=${page}&filter[has]=animethemes${typeFilter}`;
+    } else {
+      // Top popular — pages 1-10 of most popular anime (sorted by MAL score)
+      const page = Math.floor(Math.random() * 10) + 1;
+      url = `https://api.animethemes.moe/anime?include=animethemes.animethemeentries.videos.audio,animethemes.song&page[size]=40&page[number]=${page}&sort=-year&filter[has]=animethemes${typeFilter}`;
+    }
+    const res = await fetch(url, { headers: { 'User-Agent': 'UndercoverAnime/1.0' } });
     if (!res.ok) return null;
     const data = await res.json();
     return data.anime || [];
@@ -765,13 +768,13 @@ async function fetchAnimeThemes(type) {
   }
 }
 
-async function pickMusicTracks(count, type) {
+async function pickMusicTracks(count, type, pool) {
   let all = [];
   let attempts = 0;
 
   while (all.length < count * 2 && attempts < 6) {
     attempts++;
-    const animes = await fetchAnimeThemes(type);
+    const animes = await fetchAnimeThemes(type, pool);
     if (!animes || !animes.length) { await new Promise(r => setTimeout(r, 500)); continue; }
 
     for (const anime of animes) {
@@ -1408,7 +1411,7 @@ io.on('connection', (socket) => {
   //  MUSIC RATING MODE EVENTS
   // ══════════════════════════════════════
 
-  socket.on('music:start', async ({ type, count }) => {
+  socket.on('music:start', async ({ type, count, pool }) => {
     const { name, code } = socket.data || {};
     const room = rooms[code];
     if (!room || room.host !== name || room.phase !== 'lobby') return;
@@ -1429,7 +1432,7 @@ io.on('connection', (socket) => {
     io.to(code).emit('loading', true);
     broadcastRoom(code);
 
-    const tracks = await pickMusicTracks(trackCount, musicType);
+    const tracks = await pickMusicTracks(trackCount, musicType, pool || 'top');
     if (!tracks || tracks.length === 0) {
       io.to(code).emit('loading', false);
       io.to(code).emit('toast', 'Erreur AnimeThemes — réessaie');

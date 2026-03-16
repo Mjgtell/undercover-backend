@@ -1816,8 +1816,9 @@ io.on('connection', (socket) => {
 
   socket.on('music:start', async ({ type, count, pool }) => {
     const { name, code } = socket.data || {};
+    console.log('music:start received', { name, code, type, count, pool, phase: rooms[code]?.phase });
     const room = rooms[code];
-    if (!room || room.host !== name || room.phase !== 'lobby') return;
+    if (!room || room.host !== name || room.phase !== 'lobby') { console.log('music:start REJECTED', { hasRoom: !!room, isHost: room?.host===name, phase: room?.phase }); return; }
 
     const trackCount = Math.min(Math.max(parseInt(count) || 5, 1), 20);
     const musicType = ['OP','ED','both'].includes(type) ? type : 'both';

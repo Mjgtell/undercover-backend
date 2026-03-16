@@ -1099,6 +1099,18 @@ async function fetchTopAnimeThemes(type) {
 
 
 async function pickMusicTracks(count, type, pool) {
+  // For top pool, use hardcoded list directly — no loop needed
+  if (pool === 'top') {
+    const list = type === 'OP' ? HARDCODED_TRACKS.OP
+      : type === 'ED' ? HARDCODED_TRACKS.ED
+      : type === 'OS' ? HARDCODED_TRACKS.OS
+      : [...HARDCODED_TRACKS.OP, ...HARDCODED_TRACKS.ED];
+    return list
+      .sort(() => Math.random() - 0.5)
+      .slice(0, count)
+      .map((t, i) => ({ ...t, id: i, type: t.type || type }));
+  }
+
   let all = [];
   let attempts = 0;
 
@@ -1106,9 +1118,8 @@ async function pickMusicTracks(count, type, pool) {
     attempts++;
     try {
       let tracks = [];
-      if (pool === 'top') {
-        tracks = await fetchTopAnimeThemes(type);
-      } else {
+      if (false) {
+        // unused branch
         const page = Math.floor(Math.random() * 150) + 1;
         const typeFilter = type === 'OP' ? '&filter[animetheme][type]=OP'
           : type === 'ED' ? '&filter[animetheme][type]=ED'

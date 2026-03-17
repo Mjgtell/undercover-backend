@@ -992,6 +992,46 @@ const POPULAR_SLUGS = {
 };
 
 // Cache populated at startup
+// Known YouTube video IDs for popular tracks
+const KNOWN_YT_IDS = {
+  'Gurenge': 'pmanD_s7G3U',
+  'Guren no Yumiya': 'CID-sYQNCew',
+  'Again': 'IHDmCFMFQnI',
+  'The World': 'NnBbEFMBXmc',
+  'Unravel': 'vKHwQHDkWG0',
+  'Tank!': 'hdcTmpvDgUo',
+  'Colors': 'oFSFkQlA4bk',
+  'Departure': 'LCCDlWCF2SQ',
+  'The Hero': 'FkCFpLHeOuM',
+  '99': 'n3A7XnHMBmo',
+  'Re:Re:': 'b8c0OTqiB-A',
+  'Kaikai Kitan': 'NkO2GlkF1qY',
+  'My Soul Your Beats': 'xHkOz4Gn5uo',
+  'Crossing Field': 'aEs_DTKMIUs',
+  'Blue Bird': 'V0QJZE0J6d4',
+  'Sono Chi no Sadame': 'EzU9OFpSwLQ',
+  'Bloody Stream': 'rGRF4xMpGTQ',
+  'Great Days': 'sflBGSqWD9Y',
+  'Cruel Angel Thesis': 'The_mSMkSA',
+  'Connect': 'sHZNMbQgsSI',
+  'We Are!': '0order0J5UE',
+  'Bling-Bang-Bang-Born': 'ZrNpomFTBhM',
+  'Cry Baby': 'MkHAq2MrqDY',
+  'KICK BACK': 'a4pBhH6M7m0',
+  'Specialz': 'tN8-NHU1KFM',
+  'Mixed Nuts': 'bY_UhvOCmAY',
+  'Dango Daikazoku': 'lLNuoBVAW0Q',
+  'Vanillas Salt': 'fIrRYkJYBKg',
+  'Last Dance': 'VIHJx3SXJIQ',
+  'Styx Helix': 'VIHJx3SXJIQ',
+  'Kaze no Uta': 'eSAUlIxYVg4',
+  'Fly Me to the Moon': 'NFQHQG3QCVk',
+  'Zankyou Chord': 'Nq_j5qsKlMo',
+  'Chainsaw Blood': 'BHRkBsF8BEQ',
+  'Nandemonaiya': 'PDSkFeMVNFs',
+  'Sparkle': 'PDSkFeMVNFs',
+};
+
 const HARDCODED_TRACKS = {
   OP: [
     { title:'Gurenge', anime:'Demon Slayer', audioUrl:'https://v.animethemes.moe/KimetsunoYaiba-OP1.webm' },
@@ -1082,21 +1122,26 @@ async function buildTracksCache() {
       // Fetch from pages 1-3 of popular anime (sorted by MAL favorites via views)
       const pages = [1, 2, 3];
       for (const page of pages) {
-        const url = `https://api.animethemes.moe/animetheme?include=animethemeentries.videos.audio,song,anime&page[size]=30&page[number]=${page}&filter[type]=${type}&sort=-views`;
+        const url = `https://api.animethemes.moe/animetheme?include=animethemeentries.videos,song,anime,anime.resources&page[size]=30&page[number]=${page}&filter[type]=${type}&sort=-views`;
         const res = await fetch(url, { headers: { 'User-Agent': 'UndercoverAnime/1.0' }, signal: AbortSignal.timeout(10000) });
         if (!res.ok) continue;
         const data = await res.json();
         for (const t of (data.animethemes || [])) {
           const entry = t.animethemeentries?.[0];
           const video = entry?.videos?.[0];
-          const audioUrl = video?.audio?.link;
-          if (!audioUrl) continue;
+          // Get YouTube ID from anime resources
+          const ytResource = (t.anime?.resources || []).find(r => r.site === 'YouTube' || (r.link && r.link.includes('youtube')));
+          const ytId = ytResource ? (ytResource.link.match(/[?&]v=([^&]+)/)?.[1] || ytResource.link.split('/').pop()) : null;
+          // Build YouTube search URL as fallback
+          const searchQuery = encodeURIComponent(`${t.anime?.name || ''} ${t.type || type}${t.sequence > 1 ? t.sequence : ''} opening ending theme`);
+          const youtubeSearch = `https://www.youtube.com/results?search_query=${searchQuery}`;
           TRACKS_CACHE[type].push({
             id: t.id,
             title: t.song?.title || '???',
             anime: t.anime?.name || '???',
             type,
-            audioUrl,
+            ytId,
+            searchQuery: `${t.anime?.name || ''} ${t.type || type} anime opening`,
           });
         }
         await new Promise(r => setTimeout(r, 200));

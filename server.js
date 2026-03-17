@@ -1306,29 +1306,35 @@ app.get('/audio', async (req, res) => {
     return res.status(400).send('Invalid URL');
   }
   try {
-    const r = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://animethemes.moe/',
-        'Origin': 'https://animethemes.moe',
-        'Accept': 'audio/webm,audio/ogg,audio/*;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-      },
-      redirect: 'follow',
-    });
+    // Support range requests for seeking
+    const rangeHeader = req.headers.range;
+    const fetchHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Referer': 'https://animethemes.moe/',
+      'Origin': 'https://animethemes.moe',
+    };
+    if (rangeHeader) fetchHeaders['Range'] = rangeHeader;
+
+    const r = await fetch(url, { headers: fetchHeaders, redirect: 'follow' });
     if (!r.ok) return res.status(r.status).send('Not found');
-    const rawCt = r.headers.get('content-type') || '';
-    const contentType = rawCt || (url.endsWith('.webm') ? 'audio/webm' : 'audio/ogg');
+
+    const contentType = r.headers.get('content-type') || (url.endsWith('.webm') ? 'audio/webm' : 'audio/ogg');
     const contentLength = r.headers.get('content-length');
+    const contentRange = r.headers.get('content-range');
+
     res.set('Content-Type', contentType);
     res.set('Access-Control-Allow-Origin', '*');
-    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('Access-Control-Allow-Headers', 'Range');
+    res.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
     res.set('Accept-Ranges', 'bytes');
+    res.set('Cache-Control', 'public, max-age=86400');
     if (contentLength) res.set('Content-Length', contentLength);
-    // Stream response body directly to client
+    if (contentRange) res.set('Content-Range', contentRange);
+
+    res.status(r.status);
+
     const { Readable } = require('stream');
-    if (r.body && r.body.pipeTo) {
-      // Web Streams API (Node 18+)
+    if (r.body && typeof r.body.getReader === 'function') {
       Readable.fromWeb(r.body).pipe(res);
     } else {
       const buf = await r.arrayBuffer();
